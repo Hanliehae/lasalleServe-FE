@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useAuth } from "../../lib/auth-context";
-import { mockDamageReports, mockAssets } from "../../lib/mock-data";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Badge } from "../ui/badge";
+import { useAuth } from "../context/auth-context.jsx";
+import { mockDamageReports, mockAssets } from "../lib/mock-data.js";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent, CardHeader } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
-import { Label } from "../ui/label";
+} from "../components/ui/dialog";
+import { Label } from "../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Textarea } from "../ui/textarea";
+} from "../components/ui/select";
+import { Textarea } from "../components/ui/textarea";
 import { Plus, Search, AlertTriangle, Eye } from "lucide-react";
 import {
   Table,
@@ -30,8 +30,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
-import { ImageWithFallback } from "../figma/ImageWithFallback";
+} from "../components/ui/table";
+import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 
 export function ReportsPage() {
   const { user } = useAuth();

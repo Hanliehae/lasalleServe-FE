@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import { AuthProvider, useAuth } from './lib/auth-context.jsx';
-import { SidebarNav } from './components/layout/sidebar-nav.jsx';
-import { LoginPage } from './components/pages/login-page';
-import { RegisterPage } from './components/pages/register-page';
-import { DashboardPage } from './components/pages/dashboard-page';
-import { AssetsPage } from './components/pages/assets-page';
-import { LoansPage } from './components/pages/loans-page';
-import { ReportsPage } from './components/pages/reports-page';
-import { HistoryPage } from './components/pages/history-page';
-import { ExportPage } from './components/pages/export-page';
-import { DamageHistoryPage } from './components/pages/damage-history-page';
-import { Toaster } from './components/ui/sonner';
+import { AuthProvider, useAuth } from '../context/auth-context.jsx';
+import { SidebarNav } from '../components/layout/sidebar-nav.jsx';
+import { LoginPage } from '../pages/login-page';
+import { RegisterPage } from '../pages/register-page';
+import { DashboardPage } from '../pages/dashboard-page';
+import { AssetsPage } from '../pages/assets-page';
+import { LoansPage } from '../pages/loans-page';
+import { ReportsPage } from '../pages/reports-page';
+import { HistoryPage } from '../pages/history-page';
+import { ExportPage } from '../pages/export-page';
+import { DamageHistoryPage } from '../pages/damage-history-page';
+import { Toaster } from '../components/ui/sonner';
 import { Menu, X } from 'lucide-react';
-import { Button } from './components/ui/button';
+import { Button } from '../components/ui/button';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();

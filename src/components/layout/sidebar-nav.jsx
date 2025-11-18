@@ -1,4 +1,4 @@
-import { useAuth } from '../../lib/auth-context.jsx';
+import { useAuth } from '../../context/auth-context.jsx';
 import { 
   LayoutDashboard, 
   Package, 

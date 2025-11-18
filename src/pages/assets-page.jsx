@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useAuth } from "../../lib/auth-context";
-import { mockAssets } from "../../lib/mock-data";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { useAuth } from "../context/auth-context.jsx";
+import { mockAssets } from "../lib/mock-data.js";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Badge } from "../ui/badge";
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -18,16 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
-import { Label } from "../ui/label";
+} from "../components/ui/dialog";
+import { Label } from "../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Textarea } from "../ui/textarea";
+} from "../components/ui/select";
+import { Textarea } from "../components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import {
   Table,
@@ -36,7 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
+} from "../components/ui/table";
 
 export function AssetsPage() {
   const { user } = useAuth();

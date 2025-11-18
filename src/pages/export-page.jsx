@@ -1,13 +1,13 @@
-import { useAuth } from "../../lib/auth-context";
-import { mockLoans, mockDamageReports, mockAssets } from "../../lib/mock-data";
-import { Button } from "../ui/button";
+import { useAuth } from "../context/auth-context.jsx";
+import { mockLoans, mockDamageReports, mockAssets } from "../lib/mock-data.js";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
+} from "../components/ui/card";
 import {
   Download,
   FileText,

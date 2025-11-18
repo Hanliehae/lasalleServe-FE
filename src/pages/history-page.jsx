@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useAuth } from "../../lib/auth-context";
-import { mockLoans } from "../../lib/mock-data";
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Input } from "../ui/input";
+import { useAuth } from "../context/auth-context.jsx";
+import { mockLoans } from "../lib/mock-data.js";
+import { Card, CardContent, CardHeader } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "../components/ui/select";
 import { Search, Calendar } from "lucide-react";
 import {
   Table,
@@ -19,7 +19,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
+} from "../components/ui/table";
 
 export function HistoryPage() {
   const { user } = useAuth();

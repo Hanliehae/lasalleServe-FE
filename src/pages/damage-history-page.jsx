@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useAuth } from "../../lib/auth-context.jsx";
-import { mockLoans, mockAssets } from "../../lib/mock-data.js";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Badge } from "../ui/badge";
+import { useAuth } from "../context/auth-context.jsx";
+import { mockLoans, mockAssets } from "../lib/mock-data.js";
+import { Button } from "../components/ui/button.jsx";
+import { Input } from "../components/ui/input.jsx";
+import { Card, CardContent, CardHeader } from "../components/ui/card.jsx";
+import { Badge } from "../components/ui/badge.jsx";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
-import { Label } from "../ui/label";
+} from "../components/ui/dialog.jsx";
+import { Label } from "../components/ui/label.jsx";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Textarea } from "../ui/textarea";
+} from "../components/ui/select.jsx";
+import { Textarea } from "../components/ui/textarea.jsx";
 import {
   Plus,
   Search,
@@ -40,7 +40,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
+} from "../components/ui/table.jsx";
 
 export function DamageHistoryPage() {
   const { user } = useAuth();

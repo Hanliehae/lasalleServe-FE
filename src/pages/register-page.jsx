@@ -1,23 +1,23 @@
 import { useState } from "react";
-import { useAuth } from "../../lib/auth-context";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { useAuth } from "../context/auth-context.jsx";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Alert, AlertDescription } from "../ui/alert";
+} from "../components/ui/card";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from "../components/ui/select";
 import { AlertCircle, Upload } from "lucide-react";
 
 export function RegisterPage({ onNavigateToLogin }) {
