@@ -12,6 +12,7 @@ import {
 } from "../components/ui/card";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import logoDelasalle from "../assets/images/logo-delasalle.png";
 
 export function LoginPage({ onNavigateToRegister }) {
   const { login } = useAuth();
@@ -38,7 +39,14 @@ export function LoginPage({ onNavigateToRegister }) {
     <div className="flex min-h-screen items-center justify-center bg-accent p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle>Login BUF UKDLSM</CardTitle>
+          <div className="flex justify-center mb-4">
+            <img
+              src={logoDelasalle}
+              alt="Logo De La Salle"
+              style={{ width: "100px", height: "auto" }}
+            />
+          </div>
+          <CardTitle>Login LasalleServe</CardTitle>
           <CardDescription>
             Masukkan email dan password Anda untuk mengakses sistem
           </CardDescription>
