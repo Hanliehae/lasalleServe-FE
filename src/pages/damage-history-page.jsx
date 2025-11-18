@@ -1,454 +1,353 @@
 import { useState } from "react";
 import { useAuth } from "../context/auth-context.jsx";
-import { mockLoans, mockAssets } from "../lib/mock-data.js";
-import { Button } from "../components/ui/button.jsx";
-import { Input } from "../components/ui/input.jsx";
-import { Card, CardContent, CardHeader } from "../components/ui/card.jsx";
-import { Badge } from "../components/ui/badge.jsx";
+import { mockDamageReports, mockAssets } from "../lib/mock-data.js";
+import { Button } from "../components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../components/ui/dialog.jsx";
-import { Label } from "../components/ui/label.jsx";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select.jsx";
-import { Textarea } from "../components/ui/textarea.jsx";
+} from "../components/ui/select";
 import {
-  Plus,
-  Search,
-  CheckCircle,
-  XCircle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog";
+import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import {
   Calendar,
-  AlertCircle,
-  Trash2,
-  X,
-  Minus,
+  Eye,
+  TrendingUp,
+  AlertTriangle,
+  Package,
 } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../components/ui/table.jsx";
+  ResponsiveContainer,
+  LineChart,
+  BarChart,
+  PieChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Line,
+  Bar,
+  Pie,
+  Cell,
+} from "recharts";
 
 export function DamageHistoryPage() {
-  const { user } = useAuth();
-  const [loans, setLoans] = useState(mockLoans);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [isRoomLoanDialogOpen, setIsRoomLoanDialogOpen] = useState(false);
-  const [isFacilityLoanDialogOpen, setIsFacilityLoanDialogOpen] =
-    useState(false);
+  const [timePeriod, setTimePeriod] = useState("30");
 
-  const canApprove = user?.role === "staf_buf" || user?.role === "admin_buf";
-  const canCreateLoan = ["civitas", "mahasiswa", "dosen", "staf"].includes(
-    user?.role
+  // Filter reports based on time period
+  const getFilteredReports = () => {
+    const now = new Date();
+    const daysAgo = new Date(
+      now.getTime() - parseInt(timePeriod) * 24 * 60 * 60 * 1000
+    );
+
+    // Asumsi mockDamageReports dan report.createdAt tersedia
+    if (!mockDamageReports) return [];
+
+    return mockDamageReports.filter(
+      (report) => new Date(report.createdAt) >= daysAgo
+    );
+  };
+
+  const filteredReports = getFilteredReports();
+
+  // Group by priority
+  const priorityStats = filteredReports.reduce(
+    (acc, r) => {
+      acc[r.priority] = (acc[r.priority] || 0) + 1;
+      return acc;
+    },
+    { tinggi: 0, sedang: 0, rendah: 0 }
   );
 
-  const filteredLoans = loans.filter((loan) => {
-    const searchTerm = search.toLowerCase();
-    const matchesSearch =
-      loan.borrowerName.toLowerCase().includes(searchTerm) ||
-      (loan.roomName && loan.roomName.toLowerCase().includes(searchTerm)) ||
-      loan.facilities.some((f) => f.name.toLowerCase().includes(searchTerm));
-    const matchesStatus =
-      statusFilter === "all" || loan.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Group by status
+  const statusStats = filteredReports.reduce(
+    (acc, r) => {
+      acc[r.status] = (acc[r.status] || 0) + 1;
+      return acc;
+    },
+    { menunggu: 0, dalam_perbaikan: 0, selesai: 0 }
+  );
 
-  const handleCreateLoan = (data) => {
-    const newLoan = {
-      id: `l${loans.length + 1}`,
-      borrowerId: user?.id || "",
-      borrowerName: user?.name || "",
-      roomId: data.roomId,
-      roomName: data.roomName,
-      facilities: data.facilities || [],
-      startDate: data.startDate || "",
-      endDate: data.endDate || "",
-      status: "menunggu",
-      purpose: data.purpose || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setLoans([...loans, newLoan]);
+  // Group by most damaged facilities
+  const facilityDamageStats = filteredReports.reduce((acc, report) => {
+    // Cari aset berdasarkan ID
+    const asset = mockAssets.find((a) => a.id === report.assetId);
+
+    // Hanya hitung fasilitas, bukan ruangan
+    if (asset && asset.category === "fasilitas") {
+      acc[asset.name] = (acc[asset.name] || 0) + 1;
+    }
+    return acc;
+  }, {}); // Menghilangkan anotasi tipe TypeScript
+
+  // Sort by count and get top 5
+  const topDamagedFacilities = Object.entries(facilityDamageStats)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+
+  // Data for charts
+  const priorityChartData = [
+    { name: "Tinggi", value: priorityStats.tinggi, fill: "#ef4444" },
+    { name: "Sedang", value: priorityStats.sedang, fill: "#f59e0b" },
+    { name: "Rendah", value: priorityStats.rendah, fill: "#10b981" },
+  ];
+
+  const statusChartData = [
+    { name: "Menunggu", value: statusStats.menunggu },
+    { name: "Dalam Perbaikan", value: statusStats.dalam_perbaikan },
+    { name: "Selesai", value: statusStats.selesai },
+  ];
+
+  const facilityDamageChartData = topDamagedFacilities.map(([name, count]) => ({
+    name: name.length > 20 ? name.substring(0, 20) + "..." : name,
+    value: count,
+  }));
+
+  // Trend data (reports per week)
+  const getTrendData = () => {
+    const periodDays = parseInt(timePeriod);
+    const weeks = periodDays / 7;
+    const data = [];
+
+    // Loop dari minggu paling awal hingga minggu sekarang
+    for (let i = Math.ceil(weeks) - 1; i >= 0; i--) {
+      // weekEnd adalah hari terakhir dari periode (misal: Hari Ini jika i=0, 7 hari lalu jika i=1, dst)
+      const weekEnd = new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000);
+
+      // weekStart adalah 7 hari sebelum weekEnd
+      const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const count = mockDamageReports.filter((r) => {
+        const date = new Date(r.createdAt);
+        // Hitung laporan yang jatuh dalam rentang [weekStart, weekEnd)
+        return date >= weekStart && date < weekEnd;
+      }).length;
+
+      // Nama minggu disesuaikan agar urutan chart benar (Minggu 1, Minggu 2, ...)
+      data.push({
+        week: `Minggu ${Math.ceil(weeks) - i}`,
+        laporan: count,
+      });
+    }
+    return data;
   };
 
-  const handleApproveLoan = (id) => {
-    setLoans(
-      loans.map((l) =>
-        l.id === id
-          ? { ...l, status: "disetujui", updatedAt: new Date().toISOString() }
-          : l
-      )
-    );
-  };
+  const trendData = getTrendData();
 
-  const handleRejectLoan = (id) => {
-    setLoans(
-      loans.map((l) =>
-        l.id === id
-          ? { ...l, status: "ditolak", updatedAt: new Date().toISOString() }
-          : l
-      )
-    );
-  };
-
-  const getStatusBadge = (status) => {
+  const getPriorityBadge = (priority) => {
     const variants = {
-      menunggu: { variant: "secondary", label: "Menunggu" },
-      disetujui: { variant: "default", label: "Disetujui" },
-      ditolak: { variant: "destructive", label: "Ditolak" },
-      selesai: { variant: "outline", label: "Selesai" },
+      rendah: { variant: "secondary", label: "Rendah" },
+      sedang: { variant: "default", label: "Sedang" },
+      tinggi: { variant: "destructive", label: "Tinggi" },
     };
-    return (
-      <Badge variant={variants[status].variant}>{variants[status].label}</Badge>
-    );
+    return variants[priority] || { variant: "default", label: priority };
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1>Peminjaman Aset</h1>
-          <p className="text-muted-foreground mt-2">
-            {canApprove
-              ? "Kelola permintaan peminjaman aset"
-              : "Ajukan dan lihat status peminjaman Anda"}
-          </p>
-        </div>
-        {canCreateLoan && (
-          <div className="flex gap-2 flex-wrap">
-            <Dialog
-              open={isRoomLoanDialogOpen}
-              onOpenChange={setIsRoomLoanDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 size-4" />
-                  Pinjam Ruangan
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Ajukan Peminjaman Ruangan</DialogTitle>
-                  <DialogDescription>
-                    Isi form untuk mengajukan peminjaman ruangan (dapat disertai
-                    fasilitas)
-                  </DialogDescription>
-                </DialogHeader>
-                <RoomLoanForm
-                  onSubmit={(data) => {
-                    handleCreateLoan(data);
-                    setIsRoomLoanDialogOpen(false);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog
-              open={isFacilityLoanDialogOpen}
-              onOpenChange={setIsFacilityLoanDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Plus className="mr-2 size-4" />
-                  Pinjam Fasilitas
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Ajukan Peminjaman Fasilitas</DialogTitle>
-                  <DialogDescription>
-                    Isi form untuk mengajukan peminjaman fasilitas
-                  </DialogDescription>
-                </DialogHeader>
-                <FacilityLoanForm
-                  onSubmit={(data) => {
-                    handleCreateLoan(data);
-                    setIsFacilityLoanDialogOpen(false);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold">Riwayat Kerusakan</h1>
+        <p className="text-muted-foreground mt-2">
+          Analisis dan statistik laporan kerusakan aset
+        </p>
       </div>
 
+      {/* Time Period Selector */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 flex-1">
-              <Search className="size-5 text-muted-foreground" />
-              <Input
-                placeholder="Cari aset atau peminjam..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="menunggu">Menunggu</SelectItem>
-                <SelectItem value="disetujui">Disetujui</SelectItem>
-                <SelectItem value="ditolak">Ditolak</SelectItem>
-                <SelectItem value="selesai">Selesai</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <CardTitle>Periode Waktu</CardTitle>
+          <CardDescription>
+            Pilih periode untuk melihat statistik kerusakan
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {canApprove && <TableHead>Peminjam</TableHead>}
-                    <TableHead>Aset</TableHead>
-                    <TableHead>Tanggal Mulai</TableHead>
-                    <TableHead>Tanggal Selesai</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canApprove && <TableHead>Aksi</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLoans.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={canApprove ? 6 : 5}
-                        className="text-center text-muted-foreground"
-                      >
-                        Tidak ada peminjaman ditemukan
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLoans.map((loan) => (
-                      <TableRow key={loan.id}>
-                        {canApprove && (
-                          <TableCell>{loan.borrowerName}</TableCell>
-                        )}
-                        <TableCell>
-                          <div className="space-y-1">
-                            {loan.roomName && <p>Ruangan: {loan.roomName}</p>}
-                            {loan.facilities && loan.facilities.length > 0 && (
-                              <div className="text-sm text-muted-foreground">
-                                <p>Fasilitas:</p>
-                                <ul className="list-disc list-inside">
-                                  {loan.facilities.map((f, idx) => (
-                                    <li key={idx}>
-                                      {f.name} ({f.quantity}x)
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {loan.purpose && (
-                              <p className="text-sm text-muted-foreground">
-                                Keperluan: {loan.purpose}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="size-4 text-muted-foreground" />
-                            {new Date(loan.startDate).toLocaleDateString(
-                              "id-ID"
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="size-4 text-muted-foreground" />
-                            {new Date(loan.endDate).toLocaleDateString("id-ID")}
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                        {canApprove && loan.status === "menunggu" && (
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleApproveLoan(loan.id)}
-                              >
-                                <CheckCircle className="mr-1 size-4 text-green-600" />
-                                Setuju
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRejectLoan(loan.id)}
-                              >
-                                <XCircle className="mr-1 size-4 text-red-600" />
-                                Tolak
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <Select value={timePeriod} onValueChange={setTimePeriod}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">7 Hari Terakhir</SelectItem>
+              <SelectItem value="30">30 Hari Terakhir</SelectItem>
+              <SelectItem value="90">90 Hari Terakhir</SelectItem>
+              <SelectItem value="180">6 Bulan Terakhir</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Laporan</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{filteredReports.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Dalam {timePeriod} hari terakhir
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prioritas Tinggi</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{priorityStats.tinggi}</div>
+            <p className="text-xs text-muted-foreground">
+              Memerlukan perhatian segera
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Menunggu</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statusStats.menunggu}</div>
+            <p className="text-xs text-muted-foreground">
+              Belum ditangani
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Selesai</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statusStats.selesai}</div>
+            <p className="text-xs text-muted-foreground">
+              Sudah diperbaiki
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribusi Prioritas</CardTitle>
+            <CardDescription>
+              Jumlah laporan berdasarkan tingkat prioritas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={priorityChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {priorityChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Status Laporan</CardTitle>
+            <CardDescription>
+              Distribusi status penanganan laporan
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={statusChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Trend Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Trend Laporan Kerusakan</CardTitle>
+          <CardDescription>
+            Perkembangan jumlah laporan per minggu
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" />
+              <YAxis />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="laporan"
+                stroke="#8884d8"
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Top Damaged Facilities */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fasilitas Paling Sering Rusak</CardTitle>
+          <CardDescription>
+            5 fasilitas dengan laporan kerusakan terbanyak
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={facilityDamageChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-/* RoomLoanForm and FacilityLoanForm converted below (kept logic but without TS types) */
-function RoomLoanForm({ onSubmit }) {
-  const [formData, setFormData] = useState({
-    facilities: [],
-    startDate: "",
-    endDate: "",
-    purpose: "",
-  });
-  const [searchFacility, setSearchFacility] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const rooms = mockAssets.filter(
-    (a) =>
-      a.category === "ruangan" &&
-      (!formData.location || a.location === formData.location)
-  );
-  const facilities = mockAssets.filter(
-    (a) =>
-      a.category === "fasilitas" &&
-      a.name.toLowerCase().includes(searchFacility.toLowerCase())
-  );
-  const selectedRoom = rooms.find((r) => r.id === formData.roomId);
-
-  const addFacility = (facility) => {
-    if (formData.facilities.some((f) => f.id === facility.id)) return;
-    setFormData({
-      ...formData,
-      facilities: [
-        ...formData.facilities,
-        { id: facility.id, name: facility.name, quantity: 1 },
-      ],
-    });
-    setSearchFacility("");
-  };
-
-  const removeFacility = (facilityId) => {
-    setFormData({
-      ...formData,
-      facilities: formData.facilities.filter((f) => f.id !== facilityId),
-    });
-  };
-
-  const updateFacilityQuantity = (facilityId, quantity) => {
-    setFormData({
-      ...formData,
-      facilities: formData.facilities.map((f) =>
-        f.id === facilityId ? { ...f, quantity } : f
-      ),
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ...form UI (same as TSX) but without types */}
-      <div className="space-y-2">
-        <Label htmlFor="location">Pilih Lokasi Gedung</Label>
-        <Select
-          value={formData.location}
-          onValueChange={(value) =>
-            setFormData({
-              ...formData,
-              location: value,
-              roomId: undefined,
-              roomName: undefined,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Pilih gedung..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Gedung Agustinus">Gedung Agustinus</SelectItem>
-            <SelectItem value="Gedung Josephus">Gedung Josephus</SelectItem>
-            <SelectItem value="Gedung Katarina">Gedung Katarina</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* lebih UI... (kamu bisa copy bagian UI yang lengkap dari file TSX asli) */}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" type="button">
-          Batal
-        </Button>
-        <Button type="submit">Ajukan</Button>
-      </div>
-    </form>
-  );
-}
-
-function FacilityLoanForm({ onSubmit }) {
-  // implementasi mirip RoomLoanForm tapi lebih ringkas untuk keperluan pinjam fasilitas
-  const [formData, setFormData] = useState({
-    facilities: [],
-    startDate: "",
-    endDate: "",
-    purpose: "",
-  });
-  const [searchFacility, setSearchFacility] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const facilities = mockAssets.filter(
-    (a) =>
-      a.category === "fasilitas" &&
-      a.name.toLowerCase().includes(searchFacility.toLowerCase())
-  );
-
-  const addFacility = (facility) => {
-    if (formData.facilities.some((f) => f.id === facility.id)) return;
-    setFormData({
-      ...formData,
-      facilities: [
-        ...formData.facilities,
-        { id: facility.id, name: facility.name, quantity: 1 },
-      ],
-    });
-    setSearchFacility("");
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* UI selection dan list fasilitas */}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" type="button">
-          Batal
-        </Button>
-        <Button type="submit">Ajukan</Button>
-      </div>
-    </form>
   );
 }
