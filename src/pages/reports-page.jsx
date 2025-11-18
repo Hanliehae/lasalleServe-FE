@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 
 export function ReportsPage() {
   const { user } = useAuth();

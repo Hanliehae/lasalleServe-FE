@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/dialog";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import {
   Calendar,
   Eye,
@@ -209,7 +209,9 @@ export function DamageHistoryPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prioritas Tinggi</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Prioritas Tinggi
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -227,9 +229,7 @@ export function DamageHistoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statusStats.menunggu}</div>
-            <p className="text-xs text-muted-foreground">
-              Belum ditangani
-            </p>
+            <p className="text-xs text-muted-foreground">Belum ditangani</p>
           </CardContent>
         </Card>
 
@@ -240,9 +240,7 @@ export function DamageHistoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statusStats.selesai}</div>
-            <p className="text-xs text-muted-foreground">
-              Sudah diperbaiki
-            </p>
+            <p className="text-xs text-muted-foreground">Sudah diperbaiki</p>
           </CardContent>
         </Card>
       </div>
