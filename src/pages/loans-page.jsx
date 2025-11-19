@@ -1,10 +1,18 @@
-import { useState } from "react";
-import { useAuth } from "../context/auth-context.jsx";
-import { mockLoans, mockAssets } from "../lib/mock-data.js";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
+import { useMemo, useState } from 'react';
+import { Calendar, CheckCircle, Plus, Search, Trash2, XCircle } from 'lucide-react';
+
+import { useAuth } from '../context/auth-context.jsx';
+import { mockAssets, mockLoans } from '../lib/mock-data.js';
+
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -12,27 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog";
-import { Label } from "../components/ui/label";
+} from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
-import { Textarea } from "../components/ui/textarea";
-import {
-  Plus,
-  Search,
-  CheckCircle,
-  XCircle,
-  Calendar,
-  AlertCircle,
-  Trash2,
-  X,
-  Minus,
-} from "lucide-react";
+} from '../components/ui/select';
 import {
   Table,
   TableBody,
@@ -40,126 +37,135 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
+} from '../components/ui/table';
+import { Textarea } from '../components/ui/textarea';
+
+const CREATOR_ROLES = ['civitas', 'mahasiswa', 'dosen', 'staf'];
+const APPROVER_ROLES = ['staf_buf', 'admin_buf'];
+
+const STATUS_BADGES = {
+  menunggu: { variant: 'secondary', label: 'Menunggu' },
+  disetujui: { variant: 'default', label: 'Disetujui' },
+  ditolak: { variant: 'destructive', label: 'Ditolak' },
+  selesai: { variant: 'outline', label: 'Selesai' },
+};
 
 export function LoansPage() {
   const { user } = useAuth();
+
   const [loans, setLoans] = useState(mockLoans);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [isRoomLoanDialogOpen, setIsRoomLoanDialogOpen] = useState(false);
-  const [isFacilityLoanDialogOpen, setIsFacilityLoanDialogOpen] =
-    useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isRoomFormOpen, setIsRoomFormOpen] = useState(false);
+  const [isFacilityFormOpen, setIsFacilityFormOpen] = useState(false);
 
-  const canApprove = user?.role === "staf_buf" || user?.role === "admin_buf";
-  const canCreateLoan = ["civitas", "mahasiswa", "dosen", "staf"].includes(
-    user?.role
-  );
+  const canApprove = APPROVER_ROLES.includes(user?.role ?? '');
+  const canCreateLoan = CREATOR_ROLES.includes(user?.role ?? '');
 
-  const filteredLoans = loans.filter((loan) => {
-    const searchTerm = search.toLowerCase();
-    const matchesSearch =
-      loan.borrowerName.toLowerCase().includes(searchTerm) ||
-      (loan.roomName && loan.roomName.toLowerCase().includes(searchTerm)) ||
-      loan.facilities.some((f) => f.name.toLowerCase().includes(searchTerm));
-    const matchesStatus =
-      statusFilter === "all" || loan.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredLoans = useMemo(() => {
+    const keyword = searchTerm.toLowerCase();
 
-  const handleCreateLoan = (data) => {
-    const newLoan = {
-      id: `l${loans.length + 1}`,
-      borrowerId: user?.id || "",
-      borrowerName: user?.name || "",
-      roomId: data.roomId,
-      roomName: data.roomName,
-      facilities: data.facilities || [],
-      startDate: data.startDate || "",
-      endDate: data.endDate || "",
-      status: "menunggu",
-      purpose: data.purpose || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setLoans([...loans, newLoan]);
+    return loans.filter((loan) => {
+      const matchesSearch =
+        loan.borrowerName.toLowerCase().includes(keyword) ||
+        (loan.roomName && loan.roomName.toLowerCase().includes(keyword)) ||
+        loan.facilities.some((facility) =>
+          facility.name.toLowerCase().includes(keyword)
+        );
+
+      const matchesStatus =
+        statusFilter === 'all' || loan.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [loans, searchTerm, statusFilter]);
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
   };
 
-  const handleApproveLoan = (id) => {
-    setLoans(
-      loans.map((l) =>
-        l.id === id
-          ? { ...l, status: "disetujui", updatedAt: new Date().toISOString() }
-          : l
+  const handleStatusChange = (value) => {
+    setStatusFilter(value);
+  };
+
+  const handleCreateLoan = (payload) => {
+    const timestamp = new Date().toISOString();
+
+    setLoans((prev) => [
+      ...prev,
+      {
+        id: `l${prev.length + 1}`,
+        borrowerId: user?.id ?? '',
+        borrowerName: user?.name ?? 'Pengguna',
+        roomId: payload.roomId,
+        roomName: payload.roomName,
+        facilities: payload.facilities ?? [],
+        startDate: payload.startDate ?? '',
+        endDate: payload.endDate ?? '',
+        status: 'menunggu',
+        purpose: payload.purpose ?? '',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    ]);
+  };
+
+  const updateLoanStatus = (id, status) => {
+    const timestamp = new Date().toISOString();
+    setLoans((prev) =>
+      prev.map((loan) =>
+        loan.id === id ? { ...loan, status, updatedAt: timestamp } : loan
       )
     );
   };
 
-  const handleRejectLoan = (id) => {
-    setLoans(
-      loans.map((l) =>
-        l.id === id
-          ? { ...l, status: "ditolak", updatedAt: new Date().toISOString() }
-          : l
-      )
-    );
-  };
-
-  const getStatusBadge = (status) => {
-    const variants = {
-      menunggu: { variant: "secondary", label: "Menunggu" },
-      disetujui: { variant: "default", label: "Disetujui" },
-      ditolak: { variant: "destructive", label: "Ditolak" },
-      selesai: { variant: "outline", label: "Selesai" },
-    };
-    return (
-      <Badge variant={variants[status].variant}>{variants[status].label}</Badge>
-    );
+  const renderStatusBadge = (status) => {
+    const config = STATUS_BADGES[status] ?? STATUS_BADGES.menunggu;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1>Peminjaman Aset</h1>
           <p className="text-muted-foreground mt-2">
             {canApprove
-              ? "Kelola permintaan peminjaman aset"
-              : "Ajukan dan lihat status peminjaman Anda"}
+              ? 'Kelola permintaan peminjaman aset'
+              : 'Ajukan dan lihat status peminjaman Anda'}
           </p>
         </div>
+
         {canCreateLoan && (
-          <div className="flex gap-2 flex-wrap">
-            <Dialog
-              open={isRoomLoanDialogOpen}
-              onOpenChange={setIsRoomLoanDialogOpen}
-            >
+          <div className="flex flex-wrap gap-2">
+            <Dialog open={isRoomFormOpen} onOpenChange={setIsRoomFormOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 size-4" />
                   Pinjam Ruangan
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
+              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Ruangan</DialogTitle>
                   <DialogDescription>
-                    Isi form untuk mengajukan peminjaman ruangan (dapat disertai
-                    fasilitas)
+                    Lengkapi form berikut untuk mengajukan peminjaman ruangan
+                    beserta fasilitas pendukungnya.
                   </DialogDescription>
                 </DialogHeader>
                 <RoomLoanForm
-                  onSubmit={(data) => {
-                    handleCreateLoan(data);
-                    setIsRoomLoanDialogOpen(false);
+                  onSubmit={(payload) => {
+                    handleCreateLoan(payload);
+                    setIsRoomFormOpen(false);
                   }}
+                  onCancel={() => setIsRoomFormOpen(false)}
                 />
               </DialogContent>
             </Dialog>
 
             <Dialog
-              open={isFacilityLoanDialogOpen}
-              onOpenChange={setIsFacilityLoanDialogOpen}
+              open={isFacilityFormOpen}
+              onOpenChange={setIsFacilityFormOpen}
             >
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -167,40 +173,41 @@ export function LoansPage() {
                   Pinjam Fasilitas
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
+              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Fasilitas</DialogTitle>
                   <DialogDescription>
-                    Isi form untuk mengajukan peminjaman fasilitas
+                    Ajukan peminjaman fasilitas untuk menunjang kegiatan Anda.
                   </DialogDescription>
                 </DialogHeader>
                 <FacilityLoanForm
-                  onSubmit={(data) => {
-                    handleCreateLoan(data);
-                    setIsFacilityLoanDialogOpen(false);
+                  onSubmit={(payload) => {
+                    handleCreateLoan(payload);
+                    setIsFacilityFormOpen(false);
                   }}
+                  onCancel={() => setIsFacilityFormOpen(false)}
                 />
               </DialogContent>
             </Dialog>
           </div>
         )}
-      </div>
+      </header>
 
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex flex-1 items-center gap-2">
               <Search className="size-5 text-muted-foreground" />
               <Input
+                value={searchTerm}
+                onChange={handleSearchChange}
                 placeholder="Cari aset atau peminjam..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
                 className="max-w-sm"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Status peminjaman" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
@@ -212,101 +219,71 @@ export function LoansPage() {
             </Select>
           </div>
         </CardHeader>
+
         <CardContent>
-          <div className="overflow-x-auto">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {canApprove && <TableHead>Peminjam</TableHead>}
+                  <TableHead>Detail Aset</TableHead>
+                  <TableHead>Tanggal Mulai</TableHead>
+                  <TableHead>Tanggal Selesai</TableHead>
+                  <TableHead>Status</TableHead>
+                  {canApprove && <TableHead>Aksi</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLoans.length === 0 && (
                   <TableRow>
-                    {canApprove && <TableHead>Peminjam</TableHead>}
-                    <TableHead>Aset</TableHead>
-                    <TableHead>Tanggal Mulai</TableHead>
-                    <TableHead>Tanggal Selesai</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canApprove && <TableHead>Aksi</TableHead>}
+                    <TableCell
+                      colSpan={canApprove ? 6 : 5}
+                      className="text-center text-muted-foreground"
+                    >
+                      Tidak ada peminjaman ditemukan
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLoans.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={canApprove ? 6 : 5}
-                        className="text-center text-muted-foreground"
-                      >
-                        Tidak ada peminjaman ditemukan
+                )}
+
+                {filteredLoans.map((loan) => (
+                  <TableRow key={loan.id}>
+                    {canApprove && <TableCell>{loan.borrowerName}</TableCell>}
+                    <TableCell>
+                      <LoanAssetDetails loan={loan} />
+                    </TableCell>
+                    <TableCell>
+                      <LoanDate value={loan.startDate} />
+                    </TableCell>
+                    <TableCell>
+                      <LoanDate value={loan.endDate} />
+                    </TableCell>
+                    <TableCell>{renderStatusBadge(loan.status)}</TableCell>
+                    {canApprove && loan.status === 'menunggu' && (
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => updateLoanStatus(loan.id, 'disetujui')}
+                          >
+                            <CheckCircle className="mr-1 size-4 text-green-600" />
+                            Setuju
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => updateLoanStatus(loan.id, 'ditolak')}
+                          >
+                            <XCircle className="mr-1 size-4 text-red-600" />
+                            Tolak
+                          </Button>
+                        </div>
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLoans.map((loan) => (
-                      <TableRow key={loan.id}>
-                        {canApprove && (
-                          <TableCell>{loan.borrowerName}</TableCell>
-                        )}
-                        <TableCell>
-                          <div className="space-y-1">
-                            {loan.roomName && <p>Ruangan: {loan.roomName}</p>}
-                            {loan.facilities && loan.facilities.length > 0 && (
-                              <div className="text-sm text-muted-foreground">
-                                <p>Fasilitas:</p>
-                                <ul className="list-disc list-inside">
-                                  {loan.facilities.map((f, idx) => (
-                                    <li key={idx}>
-                                      {f.name} ({f.quantity}x)
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {loan.purpose && (
-                              <p className="text-sm text-muted-foreground">
-                                Keperluan: {loan.purpose}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="size-4 text-muted-foreground" />
-                            {new Date(loan.startDate).toLocaleDateString(
-                              "id-ID"
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="size-4 text-muted-foreground" />
-                            {new Date(loan.endDate).toLocaleDateString("id-ID")}
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                        {canApprove && loan.status === "menunggu" && (
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleApproveLoan(loan.id)}
-                              >
-                                <CheckCircle className="mr-1 size-4 text-green-600" />
-                                Setuju
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRejectLoan(loan.id)}
-                              >
-                                <XCircle className="mr-1 size-4 text-red-600" />
-                                Tolak
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -314,91 +291,279 @@ export function LoansPage() {
   );
 }
 
-/* RoomLoanForm and FacilityLoanForm converted below (kept logic but without TS types) */
-function RoomLoanForm({ onSubmit }) {
-  const [formData, setFormData] = useState({
-    facilities: [],
-    startDate: "",
-    endDate: "",
-    purpose: "",
-  });
-  const [searchFacility, setSearchFacility] = useState("");
+function LoanAssetDetails({ loan }) {
+  return (
+    <div className="space-y-1">
+      {loan.roomName && <p>Ruangan: {loan.roomName}</p>}
+      {loan.facilities.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          <p>Fasilitas:</p>
+          <ul className="list-inside list-disc">
+            {loan.facilities.map((facility, index) => (
+              <li key={`${loan.id}-${facility.id}-${index}`}>
+                {facility.name} ({facility.quantity}x)
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {loan.purpose && (
+        <p className="text-sm text-muted-foreground">Keperluan: {loan.purpose}</p>
+      )}
+    </div>
+  );
+}
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+function LoanDate({ value }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Calendar className="size-4 text-muted-foreground" />
+      {new Date(value).toLocaleDateString('id-ID')}
+    </div>
+  );
+}
+
+function RoomLoanForm({ onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    location: '',
+    roomId: '',
+    roomName: '',
+    startDate: '',
+    endDate: '',
+    purpose: '',
+    facilities: [],
+  });
+  const [facilitySearch, setFacilitySearch] = useState('');
+
+  const roomLocations = useMemo(() => {
+    const rooms = mockAssets.filter((asset) => asset.category === 'ruangan');
+    return Array.from(new Set(rooms.map((room) => room.location))).sort();
+  }, []);
+
+  const availableRooms = useMemo(() => {
+    return mockAssets.filter(
+      (asset) =>
+        asset.category === 'ruangan' &&
+        (formData.location ? asset.location === formData.location : true)
+    );
+  }, [formData.location]);
+
+  const availableFacilities = useMemo(() => {
+    return mockAssets.filter(
+      (asset) =>
+        asset.category === 'fasilitas' &&
+        asset.name.toLowerCase().includes(facilitySearch.toLowerCase())
+    );
+  }, [facilitySearch]);
+
+  const handleFieldChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleRoomChange = (roomId) => {
+    const selectedRoom = availableRooms.find((room) => room.id === roomId);
+    setFormData((prev) => ({
+      ...prev,
+      roomId,
+      roomName: selectedRoom?.name ?? '',
+    }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
     onSubmit(formData);
   };
 
-  const rooms = mockAssets.filter(
-    (a) =>
-      a.category === "ruangan" &&
-      (!formData.location || a.location === formData.location)
-  );
-  const facilities = mockAssets.filter(
-    (a) =>
-      a.category === "fasilitas" &&
-      a.name.toLowerCase().includes(searchFacility.toLowerCase())
-  );
-  const selectedRoom = rooms.find((r) => r.id === formData.roomId);
-
   const addFacility = (facility) => {
-    if (formData.facilities.some((f) => f.id === facility.id)) return;
-    setFormData({
-      ...formData,
-      facilities: [
-        ...formData.facilities,
-        { id: facility.id, name: facility.name, quantity: 1 },
-      ],
+    setFormData((prev) => {
+      if (prev.facilities.some((item) => item.id === facility.id)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        facilities: [
+          ...prev.facilities,
+          { id: facility.id, name: facility.name, quantity: 1 },
+        ],
+      };
     });
-    setSearchFacility("");
+    setFacilitySearch('');
   };
 
   const removeFacility = (facilityId) => {
-    setFormData({
-      ...formData,
-      facilities: formData.facilities.filter((f) => f.id !== facilityId),
-    });
+    setFormData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.filter((item) => item.id !== facilityId),
+    }));
   };
 
   const updateFacilityQuantity = (facilityId, quantity) => {
-    setFormData({
-      ...formData,
-      facilities: formData.facilities.map((f) =>
-        f.id === facilityId ? { ...f, quantity } : f
+    setFormData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.map((item) =>
+        item.id === facilityId
+          ? { ...item, quantity: Math.max(1, Number(quantity) || 1) }
+          : item
       ),
-    });
+    }));
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ...form UI (same as TSX) but without types */}
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="location">Pilih Lokasi Gedung</Label>
+        <Label>Lokasi Gedung</Label>
         <Select
           value={formData.location}
-          onValueChange={(value) =>
-            setFormData({
-              ...formData,
-              location: value,
-              roomId: undefined,
-              roomName: undefined,
-            })
-          }
+          onValueChange={(value) => {
+            handleFieldChange('location', value);
+            handleRoomChange('');
+          }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Pilih gedung..." />
+            <SelectValue placeholder="Pilih lokasi gedung" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Gedung Agustinus">Gedung Agustinus</SelectItem>
-            <SelectItem value="Gedung Josephus">Gedung Josephus</SelectItem>
-            <SelectItem value="Gedung Katarina">Gedung Katarina</SelectItem>
+            {roomLocations.map((location) => (
+              <SelectItem key={location} value={location}>
+                {location}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* lebih UI... (kamu bisa copy bagian UI yang lengkap dari file TSX asli) */}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" type="button">
+      <div className="space-y-2">
+        <Label>Ruangan</Label>
+        <Select value={formData.roomId} onValueChange={handleRoomChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih ruangan" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableRooms.map((room) => (
+              <SelectItem key={room.id} value={room.id}>
+                {room.name} ({room.location})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Tanggal Mulai</Label>
+          <Input
+            type="date"
+            value={formData.startDate}
+            onChange={(event) =>
+              handleFieldChange('startDate', event.target.value)
+            }
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Tanggal Selesai</Label>
+          <Input
+            type="date"
+            value={formData.endDate}
+            onChange={(event) =>
+              handleFieldChange('endDate', event.target.value)
+            }
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Keperluan Peminjaman</Label>
+        <Textarea
+          placeholder="Tuliskan keperluan peminjaman ruangan"
+          value={formData.purpose}
+          onChange={(event) => handleFieldChange('purpose', event.target.value)}
+          rows={3}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <Label>Cari Fasilitas Tambahan</Label>
+          <Input
+            placeholder="Cari fasilitas..."
+            value={facilitySearch}
+            onChange={(event) => setFacilitySearch(event.target.value)}
+          />
+        </div>
+
+        <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+          {availableFacilities.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Fasilitas tidak ditemukan.
+            </p>
+          )}
+
+          {availableFacilities.map((facility) => (
+            <div
+              key={facility.id}
+              className="flex items-center justify-between rounded-md border px-3 py-2"
+            >
+              <div>
+                <p className="font-medium">{facility.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Lokasi: {facility.location}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => addFacility(facility)}
+              >
+                Tambahkan
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        {formData.facilities.length > 0 && (
+          <div className="space-y-2">
+            <Label>Fasilitas Terpilih</Label>
+            <div className="space-y-2 rounded-md border p-3">
+              {formData.facilities.map((facility) => (
+                <div
+                  key={facility.id}
+                  className="flex flex-wrap items-center gap-3 rounded-md bg-muted/40 p-3"
+                >
+                  <div className="flex-grow">
+                    <p className="font-medium">{facility.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Kode: {facility.id}
+                    </p>
+                  </div>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={facility.quantity}
+                    onChange={(event) =>
+                      updateFacilityQuantity(facility.id, event.target.value)
+                    }
+                    className="w-20"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFacility(facility.id)}
+                  >
+                    <Trash2 className="size-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={onCancel}>
           Batal
         </Button>
         <Button type="submit">Ajukan</Button>
@@ -406,49 +571,19 @@ function RoomLoanForm({ onSubmit }) {
     </form>
   );
 }
-
-function FacilityLoanForm({ onSubmit }) {
-  // implementasi mirip RoomLoanForm tapi lebih ringkas untuk keperluan pinjam fasilitas
+function FacilityLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     facilities: [],
-    startDate: "",
-    endDate: "",
-    purpose: "",
+    startDate: '',
   });
-  const [searchFacility, setSearchFacility] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const facilities = mockAssets.filter(
-    (a) =>
-      a.category === "fasilitas" &&
-      a.name.toLowerCase().includes(searchFacility.toLowerCase())
-  );
-
-  const addFacility = (facility) => {
-    if (formData.facilities.some((f) => f.id === facility.id)) return;
-    setFormData({
-      ...formData,
-      facilities: [
-        ...formData.facilities,
-        { id: facility.id, name: facility.name, quantity: 1 },
-      ],
-    });
-    setSearchFacility("");
-  };
+  // TODO: lanjutkan isi form ini, kamu belum menulis UI & logic-nya
+  // untuk sekarang biarkan kosong agar tidak error
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* UI selection dan list fasilitas */}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" type="button">
-          Batal
-        </Button>
-        <Button type="submit">Ajukan</Button>
-      </div>
-    </form>
+    <div className="p-4 text-muted-foreground">
+      <p>Form peminjaman fasilitas belum selesai diimplementasikan.</p>
+    </div>
   );
 }
+

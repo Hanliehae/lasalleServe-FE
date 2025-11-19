@@ -1,284 +1,245 @@
-import React from "react";
+import { useMemo } from 'react';
+import {
+  AlertTriangle,
+  Calendar,
+  ClipboardList,
+  Clock,
+  Package,
+  TrendingDown,
+} from 'lucide-react';
 
-// (Mock imports as in original TSX — keep or replace with real project imports)
-const useAuth = () => ({
-  user: { name: "Pengguna Sistem", role: "admin_buf" },
-});
-const getMockDashboardStats = (role) => {
-  if (role === "kepala_buf")
-    return {
-      totalAssets: 1500,
-      totalReports: 45,
-      totalLoans: 320,
-      lowStockAssets: 12,
-    };
-  if (role === "admin_buf")
-    return {
-      totalAssets: 1500,
-      pendingLoans: 15,
-      activeLoans: 60,
-      pendingReports: 8,
-    };
-  if (role === "staf_buf")
-    return {
-      pendingLoans: 15,
-      pendingReports: 8,
-      activeLoans: 60,
-      overdueLoans: 5,
-    };
-  return {
-    activeLoans: 3,
-    pendingLoans: 2,
-    totalAssets: 1500,
-    totalReports: 5,
-  };
+import { Button } from '../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
+import { useAuth } from '../context/auth-context.jsx';
+import { getMockDashboardStats } from '../lib/mock-data.js';
+
+const STAT_TEMPLATES = {
+  totalAssets: { title: 'Total Aset', icon: Package, color: 'text-blue-600' },
+  totalLoans: {
+    title: 'Total Peminjaman',
+    icon: ClipboardList,
+    color: 'text-green-600',
+  },
+  totalReports: {
+    title: 'Laporan Kerusakan',
+    icon: AlertTriangle,
+    color: 'text-orange-600',
+  },
+  lowStockAssets: {
+    title: 'Stok Rendah',
+    icon: TrendingDown,
+    color: 'text-red-600',
+  },
+  pendingLoans: {
+    title: 'Permintaan Pending',
+    icon: Clock,
+    color: 'text-yellow-600',
+  },
+  activeLoans: {
+    title: 'Peminjaman Aktif',
+    icon: ClipboardList,
+    color: 'text-green-600',
+  },
+  pendingReports: {
+    title: 'Laporan Pending',
+    icon: AlertTriangle,
+    color: 'text-red-600',
+  },
+  overdueLoans: {
+    title: 'Pinjaman Jatuh Tempo',
+    icon: Clock,
+    color: 'text-orange-600',
+  },
 };
 
-const Card = ({ children }) => (
-  <div className="border rounded-lg shadow-sm">{children}</div>
-);
-const CardHeader = ({ children, className }) => (
-  <div className={`p-4 border-b ${className}`}>{children}</div>
-);
-const CardTitle = ({ children, className }) => (
-  <h3 className={`text-sm font-medium ${className}`}>{children}</h3>
-);
-const CardDescription = ({ children }) => (
-  <p className="text-sm text-gray-500">{children}</p>
-);
-const CardContent = ({ children, className }) => (
-  <div className={`p-4 ${className}`}>{children}</div>
-);
+const ROLE_STAT_KEYS = {
+  kepala_buf: ['totalAssets', 'totalLoans', 'totalReports', 'lowStockAssets'],
+  admin_buf: ['totalAssets', 'pendingLoans', 'activeLoans', 'pendingReports'],
+  staf_buf: ['pendingLoans', 'pendingReports', 'activeLoans', 'overdueLoans'],
+  default: ['activeLoans', 'pendingLoans', 'totalAssets', 'totalReports'],
+};
 
-const Package = ({ className }) => (
-  <span className={`mr-1 ${className}`}>📦</span>
-);
-const ClipboardList = ({ className }) => (
-  <span className={`mr-1 ${className}`}>📋</span>
-);
-const AlertTriangle = ({ className }) => (
-  <span className={`mr-1 ${className}`}>⚠️</span>
-);
-const Clock = ({ className }) => (
-  <span className={`mr-1 ${className}`}>🕒</span>
-);
-const TrendingDown = ({ className }) => (
-  <span className={`mr-1 ${className}`}>📉</span>
-);
+const QUICK_ACTIONS = {
+  civitas: [
+    {
+      title: 'Ajukan Peminjaman Baru',
+      description: 'Pilih aset dan buat permintaan peminjaman',
+    },
+    {
+      title: 'Lapor Kerusakan',
+      description: 'Laporkan kerusakan aset yang ditemukan',
+    },
+  ],
+  mahasiswa: [
+    {
+      title: 'Ajukan Peminjaman Baru',
+      description: 'Pilih aset dan buat permintaan peminjaman',
+    },
+    {
+      title: 'Lapor Kerusakan',
+      description: 'Laporkan kerusakan aset yang ditemukan',
+    },
+  ],
+  dosen: [
+    {
+      title: 'Ajukan Peminjaman Baru',
+      description: 'Pilih aset dan buat permintaan peminjaman',
+    },
+    {
+      title: 'Lapor Kerusakan',
+      description: 'Laporkan kerusakan aset yang ditemukan',
+    },
+  ],
+  staf: [
+    {
+      title: 'Ajukan Peminjaman Baru',
+      description: 'Pilih aset dan buat permintaan peminjaman',
+    },
+    {
+      title: 'Lapor Kerusakan',
+      description: 'Laporkan kerusakan aset yang ditemukan',
+    },
+  ],
+  staf_buf: [
+    {
+      title: 'Validasi Peminjaman',
+      description: 'Review dan approve permintaan peminjaman',
+    },
+    {
+      title: 'Kelola Aset',
+      description: 'Tambah atau update data aset',
+    },
+  ],
+  admin_buf: [
+    {
+      title: 'Validasi Peminjaman',
+      description: 'Review dan approve permintaan peminjaman',
+    },
+    {
+      title: 'Kelola Aset',
+      description: 'Tambah atau update data aset',
+    },
+  ],
+  kepala_buf: [
+    {
+      title: 'Ekspor Laporan',
+      description: 'Download laporan peminjaman dan kerusakan',
+    },
+    {
+      title: 'Lihat Ringkasan',
+      description: 'Analisis data peminjaman dan aset',
+    },
+  ],
+  default: [
+    {
+      title: 'Ajukan Peminjaman Baru',
+      description: 'Pilih aset dan buat permintaan peminjaman',
+    },
+    {
+      title: 'Lapor Kerusakan',
+      description: 'Laporkan kerusakan aset yang ditemukan',
+    },
+  ],
+};
+
+const ACTIVITY_LOGS = [
+  {
+    statusColor: 'bg-green-600',
+    title: 'Peminjaman disetujui',
+    description: 'Ruang Seminar A - 2 jam yang lalu',
+  },
+  {
+    statusColor: 'bg-yellow-600',
+    title: 'Permintaan baru masuk',
+    description: 'Proyektor LCD (2 unit) - 3 jam yang lalu',
+  },
+  {
+    statusColor: 'bg-red-600',
+    title: 'Laporan kerusakan',
+    description: 'Laptop Dell - 5 jam yang lalu',
+  },
+  {
+    statusColor: 'bg-blue-600',
+    title: 'Aset dikembalikan',
+    description: 'Sound System - 1 hari yang lalu',
+  },
+];
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const stats = getMockDashboardStats(user?.role || "");
-  const iconMap = {
-    Package,
-    ClipboardList,
-    AlertTriangle,
-    Clock,
-    TrendingDown,
-  };
+  const role = user?.role ?? 'default';
+  const stats = getMockDashboardStats(role);
 
-  const getStatsCards = () => {
-    const role = user?.role;
-    if (role === "kepala_buf") {
-      return [
-        {
-          title: "Total Aset",
-          value: stats.totalAssets,
-          icon: "Package",
-          color: "text-blue-600",
-        },
-        {
-          title: "Total Peminjaman",
-          value: stats.totalLoans,
-          icon: "ClipboardList",
-          color: "text-green-600",
-        },
-        {
-          title: "Laporan Kerusakan",
-          value: stats.totalReports,
-          icon: "AlertTriangle",
-          color: "text-orange-600",
-        },
-        {
-          title: "Stok Rendah",
-          value: stats.lowStockAssets,
-          icon: "TrendingDown",
-          color: "text-red-600",
-        },
-      ];
-    }
-    if (role === "admin_buf") {
-      return [
-        {
-          title: "Total Aset",
-          value: stats.totalAssets,
-          icon: "Package",
-          color: "text-blue-600",
-        },
-        {
-          title: "Permintaan Pending",
-          value: stats.pendingLoans,
-          icon: "Clock",
-          color: "text-yellow-600",
-        },
-        {
-          title: "Peminjaman Aktif",
-          value: stats.activeLoans,
-          icon: "ClipboardList",
-          color: "text-green-600",
-        },
-        {
-          title: "Laporan Pending",
-          value: stats.pendingReports,
-          icon: "AlertTriangle",
-          color: "text-red-600",
-        },
-      ];
-    }
-    if (role === "staf_buf") {
-      return [
-        {
-          title: "Permintaan Baru",
-          value: stats.pendingLoans,
-          icon: "Clock",
-          color: "text-yellow-600",
-        },
-        {
-          title: "Kerusakan Baru",
-          value: stats.pendingReports,
-          icon: "AlertTriangle",
-          color: "text-red-600",
-        },
-        {
-          title: "Pinjaman Aktif",
-          value: stats.activeLoans,
-          icon: "ClipboardList",
-          color: "text-green-600",
-        },
-        {
-          title: "Pinjaman Jatuh Tempo",
-          value: stats.overdueLoans,
-          icon: "Clock",
-          color: "text-orange-600",
-        },
-      ];
-    }
-    return [
-      {
-        title: "Peminjaman Aktif",
-        value: stats.activeLoans,
-        icon: "ClipboardList",
-        color: "text-green-600",
-      },
-      {
-        title: "Permintaan Pending",
-        value: stats.pendingLoans,
-        icon: "Clock",
-        color: "text-yellow-600",
-      },
-      {
-        title: "Total Aset Tersedia",
-        value: stats.totalAssets,
-        icon: "Package",
-        color: "text-blue-600",
-      },
-      {
-        title: "Laporan Saya",
-        value: stats.totalReports,
-        icon: "AlertTriangle",
-        color: "text-orange-600",
-      },
-    ];
-  };
+  const statCards = useMemo(() => {
+    const keys = ROLE_STAT_KEYS[role] ?? ROLE_STAT_KEYS.default;
 
-  const statsCards = getStatsCards();
+    return keys.map((key) => {
+      const template = STAT_TEMPLATES[key];
+      const Icon = template.icon;
+
+      return {
+        key,
+        title: template.title,
+        value: stats[key] ?? 0,
+        Icon,
+        color: template.color,
+      };
+    });
+  }, [role, stats]);
+
+  const quickActions = QUICK_ACTIONS[role] ?? QUICK_ACTIONS.default;
 
   return (
     <div className="space-y-6">
-      <div>
+      <header>
         <h1>Dashboard</h1>
         <p className="text-muted-foreground mt-2">
-          Selamat datang, {user?.name}
+          Selamat datang, {user?.name ?? 'Pengguna'}
         </p>
-      </div>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statsCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <Icon className={`size-5 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-foreground">{stat.value}</div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {statCards.map(({ key, title, value, Icon, color }) => (
+          <Card key={key}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm">
+                {title}
+              </CardTitle>
+              <Icon className={`size-5 ${color}`} />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Aksi Cepat</CardTitle>
             <CardDescription>Fitur yang sering digunakan</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {(user?.role === "civitas" ||
-              user?.role === "mahasiswa" ||
-              user?.role === "dosen" ||
-              user?.role === "staf") && (
-              <>
-                <button className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent">
-                  <p>Ajukan Peminjaman Baru</p>
-                  <p className="text-muted-foreground mt-1">
-                    Pilih aset dan buat permintaan peminjaman
-                  </p>
-                </button>
-                <button className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent">
-                  <p>Lapor Kerusakan</p>
-                  <p className="text-muted-foreground mt-1">
-                    Laporkan kerusakan aset yang ditemukan
-                  </p>
-                </button>
-              </>
-            )}
-            {(user?.role === "staf_buf" || user?.role === "admin_buf") && (
-              <>
-                <button className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent">
-                  <p>Validasi Peminjaman</p>
-                  <p className="text-muted-foreground mt-1">
-                    Review dan approve permintaan peminjaman
-                  </p>
-                </button>
-                <button className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent">
-                  <p>Kelola Aset</p>
-                  <p className="text-muted-foreground mt-1">
-                    Tambah atau update data aset
-                  </p>
-                </button>
-              </>
-            )}
-            {user?.role === "kepala_buf" && (
-              <>
-                <button className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent">
-                  <p>Ekspor Laporan</p>
-                  <p className="text-muted-foreground mt-1">
-                    Download laporan peminjaman dan kerusakan
-                  </p>
-                </button>
-                <button className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent">
-                  <p>Lihat Ringkasan</p>
-                  <p className="text-muted-foreground mt-1">
-                    Analisis data peminjaman dan aset
-                  </p>
-                </button>
-              </>
-            )}
+            {quickActions.map((action) => (
+              <Button
+                key={action.title}
+                type="button"
+                variant="outline"
+                className="h-auto flex w-full flex-col items-start gap-1 p-3 text-left"
+              >
+                <span className="font-medium">{action.title}</span>
+                <span className="text-sm text-muted-foreground">
+                  {action.description}
+                </span>
+              </Button>
+            ))}
           </CardContent>
         </Card>
 
@@ -288,45 +249,23 @@ export function DashboardPage() {
             <CardDescription>Update terkini sistem</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="size-2 rounded-full bg-green-600 mt-2" />
-              <div className="flex-1">
-                <p>Peminjaman disetujui</p>
-                <p className="text-muted-foreground">
-                  Ruang Seminar A - 2 jam yang lalu
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="size-2 rounded-full bg-yellow-600 mt-2" />
-              <div className="flex-1">
-                <p>Permintaan baru masuk</p>
-                <p className="text-muted-foreground">
-                  Proyektor LCD (2 unit) - 3 jam yang lalu
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="size-2 rounded-full bg-red-600 mt-2" />
-              <div className="flex-1">
-                <p>Laporan kerusakan</p>
-                <p className="text-muted-foreground">
-                  Laptop Dell - 5 jam yang lalu
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="size-2 rounded-full bg-blue-600 mt-2" />
-              <div className="flex-1">
-                <p>Aset dikembalikan</p>
-                <p className="text-muted-foreground">
-                  Sound System - 1 hari yang lalu
-                </p>
-              </div>
-            </div>
+            {ACTIVITY_LOGS.map((activity) => (
+              <article key={activity.title} className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className={`mt-2 size-2 rounded-full ${activity.statusColor}`}
+                />
+                <div className="flex-1">
+                  <p className="font-medium">{activity.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {activity.description}
+                  </p>
+                </div>
+              </article>
+            ))}
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   );
 }

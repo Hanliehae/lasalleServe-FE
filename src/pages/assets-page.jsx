@@ -1,16 +1,15 @@
-import { useState } from "react";
-import { useAuth } from "../context/auth-context.jsx";
-import { mockAssets } from "../lib/mock-data.js";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
+import { useMemo, useState } from 'react';
+import { Edit, Package, Plus, Search, Trash2 } from 'lucide-react';
+
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
+} from '../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -18,17 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog";
-import { Label } from "../components/ui/label";
+} from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
-import { Textarea } from "../components/ui/textarea";
-import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
+} from '../components/ui/select';
 import {
   Table,
   TableBody,
@@ -36,66 +34,87 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
+} from '../components/ui/table';
+import { Textarea } from '../components/ui/textarea';
+import { useAuth } from '../context/auth-context.jsx';
+import { mockAssets } from '../lib/mock-data.js';
+
+const MANAGER_ROLES = ['admin_buf'];
 
 export function AssetsPage() {
   const { user } = useAuth();
+
   const [assets, setAssets] = useState(mockAssets);
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [editingAsset, setEditingAsset] = useState(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const canManageAssets = user?.role === "admin_buf";
-  const canViewAll =
-    user?.role === "admin_buf" ||
-    user?.role === "staf_buf" ||
-    user?.role === "kepala_buf";
+  const canManageAssets = MANAGER_ROLES.includes(user?.role ?? '');
 
-  const filteredAssets = assets.filter((asset) => {
-    const matchesSearch =
-      asset.name.toLowerCase().includes(search.toLowerCase()) ||
-      asset.location.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || asset.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredAssets = useMemo(() => {
+    const keyword = searchTerm.toLowerCase();
+    return assets.filter((asset) => {
+      const matchesSearch =
+        asset.name.toLowerCase().includes(keyword) ||
+        asset.location.toLowerCase().includes(keyword);
+      const matchesCategory =
+        categoryFilter === 'all' || asset.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [assets, searchTerm, categoryFilter]);
 
-  const handleAddAsset = (data) => {
-    const newAsset = {
-      id: `a${assets.length + 1}`,
-      name: data.name || "",
-      category: data.category || "fasilitas",
-      location: data.location || "",
-      totalStock: data.totalStock || 0,
-      availableStock: data.availableStock || 0,
-      condition: data.condition || "baik",
-      description: data.description,
-    };
-    setAssets([...assets, newAsset]);
-    setIsAddDialogOpen(false);
+  const handleSearchChange = (event) => setSearchTerm(event.target.value);
+  const handleCategoryChange = (value) => setCategoryFilter(value);
+
+  const handleAddAsset = (payload) => {
+    setAssets((prev) => [
+      ...prev,
+      {
+        id: `a${prev.length + 1}`,
+        name: payload.name ?? '',
+        category: payload.category ?? 'fasilitas',
+        location: payload.location ?? '',
+        totalStock: payload.totalStock ?? 0,
+        availableStock: payload.availableStock ?? 0,
+        condition: payload.condition ?? 'baik',
+        description: payload.description ?? '',
+      },
+    ]);
+    setIsDialogOpen(false);
   };
 
-  const handleUpdateAsset = (id, updates) => {
-    setAssets(assets.map((a) => (a.id === id ? { ...a, ...updates } : a)));
+  const handleUpdateAsset = (updates) => {
+    if (!editingAsset) return;
+
+    setAssets((prev) =>
+      prev.map((asset) =>
+        asset.id === editingAsset.id ? { ...asset, ...updates } : asset
+      )
+    );
     setEditingAsset(null);
+    setIsDialogOpen(false);
   };
 
   const handleDeleteAsset = (id) => {
-    if (confirm("Yakin ingin menghapus aset ini?")) {
-      setAssets(assets.filter((a) => a.id !== id));
-    }
+    if (window.confirm('Yakin ingin menghapus aset ini?')) {
+      setAssets((prev) => prev.filter((asset) => asset.id !== id));
+    };
   };
 
-  const getConditionBadge = (condition) => {
-    const variants = {
-      baik: "default",
-      rusak_ringan: "secondary",
-      rusak_berat: "destructive",
-    };
-    return (
-      <Badge variant={variants[condition]}>{condition.replace("_", " ")}</Badge>
-    );
+  const openCreateDialog = () => {
+    setEditingAsset(null);
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (asset) => {
+    setEditingAsset(asset);
+    setIsDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setEditingAsset(null);
+    setIsDialogOpen(false);
   };
 
   return (
@@ -108,23 +127,10 @@ export function AssetsPage() {
           </p>
         </div>
         {canManageAssets && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 size-4" />
-                Tambah Aset
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Tambah Aset Baru</DialogTitle>
-                <DialogDescription>
-                  Masukkan informasi aset yang akan ditambahkan
-                </DialogDescription>
-              </DialogHeader>
-              <AssetForm onSubmit={handleAddAsset} />
-            </DialogContent>
-          </Dialog>
+          <Button onClick={openCreateDialog}>
+            <Plus className="mr-2 size-4" />
+            Tambah Aset
+          </Button>
         )}
       </div>
 
@@ -135,12 +141,12 @@ export function AssetsPage() {
               <Search className="size-5 text-muted-foreground" />
               <Input
                 placeholder="Cari aset atau lokasi..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchTerm}
+                onChange={handleSearchChange}
                 className="max-w-sm"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={handleCategoryChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Kategori" />
               </SelectTrigger>
@@ -153,124 +159,142 @@ export function AssetsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama Aset</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead>Lokasi</TableHead>
-                    <TableHead>Stok Total</TableHead>
-                    <TableHead>Tersedia</TableHead>
-                    <TableHead>Kondisi</TableHead>
-                    {canManageAssets && <TableHead>Aksi</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAssets.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={canManageAssets ? 7 : 6}
-                        className="text-center text-muted-foreground"
-                      >
-                        Tidak ada aset ditemukan
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredAssets.map((asset) => (
-                      <TableRow key={asset.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Package className="size-4 text-muted-foreground" />
-                            <div>
-                              <p>{asset.name}</p>
-                              {asset.description && (
-                                <p className="text-muted-foreground">
-                                  {asset.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="capitalize">
-                          {asset.category}
-                        </TableCell>
-                        <TableCell>{asset.location}</TableCell>
-                        <TableCell>{asset.totalStock}</TableCell>
-                        <TableCell>
-                          <span
-                            className={
-                              asset.availableStock === 0 ? "text-red-600" : ""
-                            }
-                          >
-                            {asset.availableStock}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {getConditionBadge(asset.condition)}
-                        </TableCell>
-                        {canManageAssets && (
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setEditingAsset(asset)}
-                              >
-                                <Edit className="size-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteAsset(asset.id)}
-                              >
-                                <Trash2 className="size-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <AssetsTable
+            assets={filteredAssets}
+            canManage={canManageAssets}
+            onEdit={openEditDialog}
+            onDelete={handleDeleteAsset}
+          />
         </CardContent>
       </Card>
 
-      {editingAsset && (
-        <Dialog
-          open={!!editingAsset}
-          onOpenChange={() => setEditingAsset(null)}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Aset</DialogTitle>
-              <DialogDescription>Update informasi aset</DialogDescription>
-            </DialogHeader>
-            <AssetForm
-              initialData={editingAsset}
-              onSubmit={(data) => handleUpdateAsset(editingAsset.id, data)}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingAsset ? 'Edit Aset' : 'Tambah Aset Baru'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingAsset
+                ? 'Perbarui informasi aset.'
+                : 'Masukkan informasi aset yang akan ditambahkan.'}
+            </DialogDescription>
+          </DialogHeader>
+          <AssetForm
+            initialData={editingAsset}
+            onSubmit={editingAsset ? handleUpdateAsset : handleAddAsset}
+            onCancel={closeDialog}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function AssetForm({ initialData, onSubmit }) {
+function AssetsTable({ assets, canManage, onEdit, onDelete }) {
+  if (assets.length === 0) {
+    return (
+      <div className="rounded-md border p-8 text-center text-muted-foreground">
+        Tidak ada aset ditemukan
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nama Aset</TableHead>
+              <TableHead>Kategori</TableHead>
+              <TableHead>Lokasi</TableHead>
+              <TableHead>Stok Total</TableHead>
+              <TableHead>Tersedia</TableHead>
+              <TableHead>Kondisi</TableHead>
+              {canManage && <TableHead>Aksi</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {assets.map((asset) => (
+              <TableRow key={asset.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Package className="size-4 text-muted-foreground" />
+                    <div>
+                      <p>{asset.name}</p>
+                      {asset.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {asset.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="capitalize">{asset.category}</TableCell>
+                <TableCell>{asset.location}</TableCell>
+                <TableCell>{asset.totalStock}</TableCell>
+                <TableCell>
+                  <span
+                    className={
+                      asset.availableStock === 0 ? 'text-red-600' : undefined
+                    }
+                  >
+                    {asset.availableStock}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <AssetConditionBadge value={asset.condition} />
+                </TableCell>
+                {canManage && (
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(asset)}
+                      >
+                        <Edit className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(asset.id)}
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+function AssetConditionBadge({ value }) {
+  const variants = {
+    baik: 'default',
+    rusak_ringan: 'secondary',
+    rusak_berat: 'destructive',
+  };
+
+  return <Badge variant={variants[value]}>{value.replace('_', ' ')}</Badge>;
+}
+
+function AssetForm({ initialData, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(
-    initialData || {
-      name: "",
-      category: "fasilitas",
-      location: "",
+    initialData ?? {
+      name: '',
+      category: 'fasilitas',
+      location: '',
       totalStock: 0,
       availableStock: 0,
-      condition: "baik",
-      description: "",
+      condition: 'baik',
+      description: '',
     }
   );
 
@@ -285,14 +309,18 @@ function AssetForm({ initialData, onSubmit }) {
         <Label>Nama Aset</Label>
         <Input
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(event) =>
+            setFormData({ ...formData, name: event.target.value })
+          }
         />
       </div>
       <div className="space-y-2">
         <Label>Kategori</Label>
         <Select
           value={formData.category}
-          onValueChange={(v) => setFormData({ ...formData, category: v })}
+          onValueChange={(value) =>
+            setFormData({ ...formData, category: value })
+          }
         >
           <SelectTrigger>
             <SelectValue />
@@ -303,45 +331,53 @@ function AssetForm({ initialData, onSubmit }) {
           </SelectContent>
         </Select>
       </div>
+
       <div className="space-y-2">
         <Label>Lokasi</Label>
         <Input
           value={formData.location}
-          onChange={(e) =>
-            setFormData({ ...formData, location: e.target.value })
+          onChange={(event) =>
+            setFormData({ ...formData, location: event.target.value })
           }
         />
       </div>
+
       <div className="flex gap-2">
-        <div className="flex-1">
+        <div className="flex-1 space-y-2">
           <Label>Total Stok</Label>
           <Input
             type="number"
             value={formData.totalStock}
-            onChange={(e) =>
-              setFormData({ ...formData, totalStock: Number(e.target.value) })
+            onChange={(event) =>
+              setFormData({
+                ...formData,
+                totalStock: Number(event.target.value),
+              })
             }
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 space-y-2">
           <Label>Stok Tersedia</Label>
           <Input
             type="number"
             value={formData.availableStock}
-            onChange={(e) =>
+            onChange={(event) =>
               setFormData({
                 ...formData,
-                availableStock: Number(e.target.value),
+                availableStock: Number(event.target.value),
               })
             }
           />
         </div>
       </div>
+
       <div className="space-y-2">
         <Label>Kondisi</Label>
         <Select
           value={formData.condition}
-          onValueChange={(v) => setFormData({ ...formData, condition: v })}
+          onValueChange={(value) =>
+            setFormData({ ...formData, condition: value })
+          }
         >
           <SelectTrigger>
             <SelectValue />
@@ -353,24 +389,20 @@ function AssetForm({ initialData, onSubmit }) {
           </SelectContent>
         </Select>
       </div>
+
       <div className="space-y-2">
         <Label>Deskripsi</Label>
         <Textarea
           value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
+          onChange={(event) =>
+            setFormData({ ...formData, description: event.target.value })
           }
+          rows={3}
         />
       </div>
 
-      <div className="flex gap-2 justify-end">
-        <Button
-          variant="outline"
-          type="button"
-          onClick={() => {
-            /* cancel handled by parent dialog */
-          }}
-        >
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
           Batal
         </Button>
         <Button type="submit">Simpan</Button>
