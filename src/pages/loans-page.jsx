@@ -1,18 +1,25 @@
-import { useMemo, useState } from 'react';
-import { Calendar, CheckCircle, Plus, Search, Trash2, XCircle } from 'lucide-react';
+import { useMemo, useState } from "react";
+import {
+  Calendar,
+  CheckCircle,
+  Plus,
+  Search,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 
-import { useAuth } from '../context/auth-context.jsx';
-import { mockAssets, mockLoans } from '../lib/mock-data.js';
+import { useAuth } from "../context/auth-context.jsx";
+import { mockAssets, mockLoans } from "../lib/mock-data.js";
 
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,16 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+} from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
+} from "../components/ui/select";
 import {
   Table,
   TableBody,
@@ -37,30 +44,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table';
-import { Textarea } from '../components/ui/textarea';
+} from "../components/ui/table";
+import { Textarea } from "../components/ui/textarea";
 
-const CREATOR_ROLES = ['civitas', 'mahasiswa', 'dosen', 'staf'];
-const APPROVER_ROLES = ['staf_buf', 'admin_buf'];
+const CREATOR_ROLES = ["civitas", "mahasiswa", "dosen", "staf"];
+const APPROVER_ROLES = ["staf_buf", "admin_buf"];
 
 const STATUS_BADGES = {
-  menunggu: { variant: 'secondary', label: 'Menunggu' },
-  disetujui: { variant: 'default', label: 'Disetujui' },
-  ditolak: { variant: 'destructive', label: 'Ditolak' },
-  selesai: { variant: 'outline', label: 'Selesai' },
+  menunggu: { variant: "secondary", label: "Menunggu" },
+  disetujui: { variant: "default", label: "Disetujui" },
+  ditolak: { variant: "destructive", label: "Ditolak" },
+  selesai: { variant: "outline", label: "Selesai" },
 };
 
 export function LoansPage() {
   const { user } = useAuth();
 
   const [loans, setLoans] = useState(mockLoans);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isRoomFormOpen, setIsRoomFormOpen] = useState(false);
   const [isFacilityFormOpen, setIsFacilityFormOpen] = useState(false);
 
-  const canApprove = APPROVER_ROLES.includes(user?.role ?? '');
-  const canCreateLoan = CREATOR_ROLES.includes(user?.role ?? '');
+  const canApprove = APPROVER_ROLES.includes(user?.role ?? "");
+  const canCreateLoan = CREATOR_ROLES.includes(user?.role ?? "");
 
   const filteredLoans = useMemo(() => {
     const keyword = searchTerm.toLowerCase();
@@ -74,7 +81,7 @@ export function LoansPage() {
         );
 
       const matchesStatus =
-        statusFilter === 'all' || loan.status === statusFilter;
+        statusFilter === "all" || loan.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -95,15 +102,15 @@ export function LoansPage() {
       ...prev,
       {
         id: `l${prev.length + 1}`,
-        borrowerId: user?.id ?? '',
-        borrowerName: user?.name ?? 'Pengguna',
+        borrowerId: user?.id ?? "",
+        borrowerName: user?.name ?? "Pengguna",
         roomId: payload.roomId,
         roomName: payload.roomName,
         facilities: payload.facilities ?? [],
-        startDate: payload.startDate ?? '',
-        endDate: payload.endDate ?? '',
-        status: 'menunggu',
-        purpose: payload.purpose ?? '',
+        startDate: payload.startDate ?? "",
+        endDate: payload.endDate ?? "",
+        status: "menunggu",
+        purpose: payload.purpose ?? "",
         createdAt: timestamp,
         updatedAt: timestamp,
       },
@@ -131,10 +138,12 @@ export function LoansPage() {
           <h1>Peminjaman Aset</h1>
           <p className="text-muted-foreground mt-2">
             {canApprove
-              ? 'Kelola permintaan peminjaman aset'
-              : 'Ajukan dan lihat status peminjaman Anda'}
+              ? "Kelola permintaan peminjaman aset"
+              : "Ajukan dan lihat status peminjaman Anda"}
           </p>
         </div>
+
+        {/* PINJAM RUANGAN */}
 
         {canCreateLoan && (
           <div className="flex flex-wrap gap-2">
@@ -145,7 +154,7 @@ export function LoansPage() {
                   Pinjam Ruangan
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Ruangan</DialogTitle>
                   <DialogDescription>
@@ -258,13 +267,15 @@ export function LoansPage() {
                       <LoanDate value={loan.endDate} />
                     </TableCell>
                     <TableCell>{renderStatusBadge(loan.status)}</TableCell>
-                    {canApprove && loan.status === 'menunggu' && (
+                    {canApprove && loan.status === "menunggu" && (
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => updateLoanStatus(loan.id, 'disetujui')}
+                            onClick={() =>
+                              updateLoanStatus(loan.id, "disetujui")
+                            }
                           >
                             <CheckCircle className="mr-1 size-4 text-green-600" />
                             Setuju
@@ -272,7 +283,7 @@ export function LoansPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => updateLoanStatus(loan.id, 'ditolak')}
+                            onClick={() => updateLoanStatus(loan.id, "ditolak")}
                           >
                             <XCircle className="mr-1 size-4 text-red-600" />
                             Tolak
@@ -308,7 +319,9 @@ function LoanAssetDetails({ loan }) {
         </div>
       )}
       {loan.purpose && (
-        <p className="text-sm text-muted-foreground">Keperluan: {loan.purpose}</p>
+        <p className="text-sm text-muted-foreground">
+          Keperluan: {loan.purpose}
+        </p>
       )}
     </div>
   );
@@ -318,32 +331,33 @@ function LoanDate({ value }) {
   return (
     <div className="flex items-center gap-2">
       <Calendar className="size-4 text-muted-foreground" />
-      {new Date(value).toLocaleDateString('id-ID')}
+      {new Date(value).toLocaleDateString("id-ID")}
     </div>
   );
 }
 
+//form ajukan pinjam ruangan
 function RoomLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    location: '',
-    roomId: '',
-    roomName: '',
-    startDate: '',
-    endDate: '',
-    purpose: '',
+    location: "",
+    roomId: "",
+    roomName: "",
+    startDate: "",
+    endDate: "",
+    purpose: "",
     facilities: [],
   });
-  const [facilitySearch, setFacilitySearch] = useState('');
+  const [facilitySearch, setFacilitySearch] = useState("");
 
   const roomLocations = useMemo(() => {
-    const rooms = mockAssets.filter((asset) => asset.category === 'ruangan');
+    const rooms = mockAssets.filter((asset) => asset.category === "ruangan");
     return Array.from(new Set(rooms.map((room) => room.location))).sort();
   }, []);
 
   const availableRooms = useMemo(() => {
     return mockAssets.filter(
       (asset) =>
-        asset.category === 'ruangan' &&
+        asset.category === "ruangan" &&
         (formData.location ? asset.location === formData.location : true)
     );
   }, [formData.location]);
@@ -351,7 +365,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
   const availableFacilities = useMemo(() => {
     return mockAssets.filter(
       (asset) =>
-        asset.category === 'fasilitas' &&
+        asset.category === "fasilitas" &&
         asset.name.toLowerCase().includes(facilitySearch.toLowerCase())
     );
   }, [facilitySearch]);
@@ -365,7 +379,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
     setFormData((prev) => ({
       ...prev,
       roomId,
-      roomName: selectedRoom?.name ?? '',
+      roomName: selectedRoom?.name ?? "",
     }));
   };
 
@@ -388,7 +402,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
         ],
       };
     });
-    setFacilitySearch('');
+    setFacilitySearch("");
   };
 
   const removeFacility = (facilityId) => {
@@ -416,8 +430,8 @@ function RoomLoanForm({ onSubmit, onCancel }) {
         <Select
           value={formData.location}
           onValueChange={(value) => {
-            handleFieldChange('location', value);
-            handleRoomChange('');
+            handleFieldChange("location", value);
+            handleRoomChange("");
           }}
         >
           <SelectTrigger>
@@ -456,7 +470,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
             type="date"
             value={formData.startDate}
             onChange={(event) =>
-              handleFieldChange('startDate', event.target.value)
+              handleFieldChange("startDate", event.target.value)
             }
             required
           />
@@ -467,7 +481,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
             type="date"
             value={formData.endDate}
             onChange={(event) =>
-              handleFieldChange('endDate', event.target.value)
+              handleFieldChange("endDate", event.target.value)
             }
             required
           />
@@ -479,7 +493,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
         <Textarea
           placeholder="Tuliskan keperluan peminjaman ruangan"
           value={formData.purpose}
-          onChange={(event) => handleFieldChange('purpose', event.target.value)}
+          onChange={(event) => handleFieldChange("purpose", event.target.value)}
           rows={3}
         />
       </div>
@@ -574,7 +588,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
 function FacilityLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     facilities: [],
-    startDate: '',
+    startDate: "",
   });
 
   // TODO: lanjutkan isi form ini, kamu belum menulis UI & logic-nya
@@ -586,4 +600,3 @@ function FacilityLoanForm({ onSubmit, onCancel }) {
     </div>
   );
 }
-
