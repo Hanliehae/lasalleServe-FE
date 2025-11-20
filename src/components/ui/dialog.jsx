@@ -3,30 +3,28 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
-import { cn } from "./utils.js";
+import { cn } from "./utils";
 
-function Dialog(props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+// ROOT
+export function Dialog({ children, ...props }) {
+  return <DialogPrimitive.Root {...props}>{children}</DialogPrimitive.Root>;
 }
 
-function DialogTrigger(props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+// TRIGGER
+export function DialogTrigger({ children, ...props }) {
+  return (
+    <DialogPrimitive.Trigger asChild {...props}>
+      {children}
+    </DialogPrimitive.Trigger>
+  );
 }
 
-function DialogPortal(props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
-}
-
-function DialogClose(props) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
-}
-
-function DialogOverlay({ className, ...props }) {
+// OVERLAY (TIDAK TRANSPARAN)
+export function DialogOverlay({ className, ...props }) {
   return (
     <DialogPrimitive.Overlay
-      data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 bg-black/50",
+        "fixed inset-0 z-40 bg-black/70 backdrop-blur-[2px]",
         className
       )}
       {...props}
@@ -34,81 +32,95 @@ function DialogOverlay({ className, ...props }) {
   );
 }
 
-function DialogContent({ className, children, ...props }) {
+// CONTENT (FIX POSISI + TIDAK TRANSPARAN + RESPONSIF + SCROLL)
+export function DialogContent({ className, children, ...props }) {
   return (
-    <DialogPortal>
+    <DialogPrimitive.Portal>
       <DialogOverlay />
+
       <DialogPrimitive.Content
-        data-slot="dialog-content"
+        {...props}
         className={cn(
-          "bg-background fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)]",
-          "translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          // // posisi TEPAT DI TENGAH
+          // "fixed z-50",
+          // "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+
+          // // styling kotak
+          // "!bg-white rounded-xl border shadow-2xl",
+
+          // // ukuran
+          // "w-[95%] md:w-[650px]",
+
+          // // height & scroll
+          // "max-h-[90vh] overflow-y-auto",
+
+          // // tambah padding
+          // "p-6",
+
+          // POSISI DI TENGAH LAYAR
+          "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
+
+          // BACKGROUND SOLID (TIDAK TRANSPARAN)
+          "bg-popover border border-border",
+
+          // STYLING
+          "rounded-lg shadow-lg",
+
+          // UKURAN RESPONSIF
+          "w-[90vw] max-w-[500px] max-h-[85vh]",
+          "md:w-[600px] md:max-w-[600px]",
+
+          // SCROLL JIKA KONTEN PANJANG
+          "max-h-[90vh] overflow-y-auto",
+
+          // tambah padding
+          "p-6",
           className
         )}
-        {...props}
       >
-        {children}
-        <DialogPrimitive.Close className="absolute top-4 right-4 opacity-70 hover:opacity-100">
+        {/* wrapper scroll */}
+        <div className="p-6 overflow-y-auto max-h-[80vh]">{children}</div>
+
+        {/* close button */}
+        {/* <DialogPrimitive.Close className="absolute top-4 right-4 opacity-70 hover:opacity-100">
           <XIcon className="size-4" />
+        </DialogPrimitive.Close> */}
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <XIcon className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
-    </DialogPortal>
+    </DialogPrimitive.Portal>
   );
 }
 
-function DialogHeader({ className, ...props }) {
+// HEADER
+export function DialogHeader({ className, ...props }) {
   return (
-    <div
-      data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
-      {...props}
-    />
+    <div className={cn("mb-4 flex flex-col gap-2", className)} {...props} />
   );
 }
 
-function DialogFooter({ className, ...props }) {
-  return (
-    <div
-      data-slot="dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-function DialogTitle({ className, ...props }) {
+export function DialogTitle({ className, ...props }) {
   return (
     <DialogPrimitive.Title
-      data-slot="dialog-title"
-      className={cn("text-lg font-semibold", className)}
+      className={cn("text-xl font-semibold", className)}
       {...props}
     />
   );
 }
 
-function DialogDescription({ className, ...props }) {
+export function DialogDescription({ className, ...props }) {
   return (
     <DialogPrimitive.Description
-      data-slot="dialog-description"
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   );
 }
 
-export {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogClose,
-  DialogOverlay,
-  DialogPortal,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-};
+export function DialogFooter({ className, ...props }) {
+  return (
+    <div className={cn("flex justify-end gap-3 mt-4", className)} {...props} />
+  );
+}

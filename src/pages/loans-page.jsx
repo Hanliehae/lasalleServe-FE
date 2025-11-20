@@ -154,7 +154,8 @@ export function LoansPage() {
                   Pinjam Ruangan
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <DialogContent className="sm:max-w-2xl bg-card">
+                {/* <div className="max-h-[80vh] overflow-y-auto p-6"> */}
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Ruangan</DialogTitle>
                   <DialogDescription>
@@ -162,6 +163,7 @@ export function LoansPage() {
                     beserta fasilitas pendukungnya.
                   </DialogDescription>
                 </DialogHeader>
+
                 <RoomLoanForm
                   onSubmit={(payload) => {
                     handleCreateLoan(payload);
@@ -169,6 +171,7 @@ export function LoansPage() {
                   }}
                   onCancel={() => setIsRoomFormOpen(false)}
                 />
+                {/* </div> */}
               </DialogContent>
             </Dialog>
 
@@ -182,13 +185,15 @@ export function LoansPage() {
                   Pinjam Fasilitas
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+              <DialogContent className="sm:max-w-2xl bg-card">
+                {/* <div className="max-h-[80vh] overflow-y-auto p-6"> */}
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Fasilitas</DialogTitle>
                   <DialogDescription>
                     Ajukan peminjaman fasilitas untuk menunjang kegiatan Anda.
                   </DialogDescription>
                 </DialogHeader>
+
                 <FacilityLoanForm
                   onSubmit={(payload) => {
                     handleCreateLoan(payload);
@@ -196,6 +201,7 @@ export function LoansPage() {
                   }}
                   onCancel={() => setIsFacilityFormOpen(false)}
                 />
+                {/* </div> */}
               </DialogContent>
             </Dialog>
           </div>
@@ -585,18 +591,192 @@ function RoomLoanForm({ onSubmit, onCancel }) {
     </form>
   );
 }
+
+// FORM AJUKAN PINJAM FASILITAS
+
+{
+  /* <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+  <div className="overflow-y-auto max-h-[75vh] pr-2">
+    <DialogHeader>
+      <DialogTitle>Ajukan Peminjaman Fasilitas</DialogTitle>
+      <DialogDescription>
+        Ajukan peminjaman fasilitas untuk menunjang kegiatan Anda.
+      </DialogDescription>
+    </DialogHeader>
+
+    <FacilityLoanForm
+      onSubmit={(payload) => {
+        handleCreateLoan(payload);
+        setIsFacilityFormOpen(false);
+      }}
+      onCancel={() => setIsFacilityFormOpen(false)}
+    />
+  </div>
+</DialogContent>; */
+}
+
 function FacilityLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    facilities: [],
     startDate: "",
+    endDate: "",
+    purpose: "",
+    facilities: [],
   });
 
-  // TODO: lanjutkan isi form ini, kamu belum menulis UI & logic-nya
-  // untuk sekarang biarkan kosong agar tidak error
+  const [facilitySearch, setFacilitySearch] = useState("");
+
+  // Ambil hanya fasilitas
+  const availableFacilities = useMemo(() => {
+    return mockAssets.filter(
+      (asset) =>
+        asset.category === "fasilitas" &&
+        asset.name.toLowerCase().includes(facilitySearch.toLowerCase())
+    );
+  }, [facilitySearch]);
+
+  const handleFieldChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const addFacility = (facility) => {
+    setFormData((prev) => {
+      if (prev.facilities.some((item) => item.id === facility.id)) return prev;
+
+      return {
+        ...prev,
+        facilities: [
+          ...prev.facilities,
+          { id: facility.id, name: facility.name, quantity: 1 },
+        ],
+      };
+    });
+  };
+
+  const updateFacilityQuantity = (id, quantity) => {
+    setFormData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.map((item) =>
+        item.id === id
+          ? { ...item, quantity: Math.max(1, Number(quantity)) }
+          : item
+      ),
+    }));
+  };
+
+  const removeFacility = (id) => {
+    setFormData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.filter((item) => item.id !== id),
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
 
   return (
-    <div className="p-4 text-muted-foreground">
-      <p>Form peminjaman fasilitas belum selesai diimplementasikan.</p>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Tanggal Mulai</Label>
+          <Input
+            type="date"
+            value={formData.startDate}
+            onChange={(e) => handleFieldChange("startDate", e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <Label>Tanggal Selesai</Label>
+          <Input
+            type="date"
+            value={formData.endDate}
+            onChange={(e) => handleFieldChange("endDate", e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label>Keperluan Peminjaman</Label>
+        <Textarea
+          rows={3}
+          placeholder="Tuliskan keperluan peminjaman fasilitas"
+          value={formData.purpose}
+          onChange={(e) => handleFieldChange("purpose", e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <Label>Cari Fasilitas</Label>
+        <Input
+          placeholder="Cari fasilitas..."
+          value={facilitySearch}
+          onChange={(e) => setFacilitySearch(e.target.value)}
+        />
+
+        <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2">
+          {availableFacilities.map((f) => (
+            <div
+              key={f.id}
+              className="flex items-center justify-between border rounded-md px-3 py-2"
+            >
+              <div>
+                <p className="font-medium">{f.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Lokasi: {f.location}
+                </p>
+              </div>
+              <Button variant="ghost" onClick={() => addFacility(f)}>
+                Tambahkan
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        {formData.facilities.length > 0 && (
+          <div className="border rounded-md p-3 space-y-2">
+            <Label>Fasilitas Terpilih</Label>
+
+            {formData.facilities.map((f) => (
+              <div
+                key={f.id}
+                className="flex items-center gap-3 bg-muted/40 rounded-md p-3"
+              >
+                <div className="flex-grow">
+                  <p className="font-medium">{f.name}</p>
+                  <p className="text-xs text-muted-foreground">ID: {f.id}</p>
+                </div>
+
+                <Input
+                  type="number"
+                  min={1}
+                  value={f.quantity}
+                  onChange={(e) => updateFacilityQuantity(f.id, e.target.value)}
+                  className="w-20"
+                />
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFacility(f.id)}
+                >
+                  ❌
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" type="button" onClick={onCancel}>
+          Batal
+        </Button>
+        <Button type="submit">Ajukan</Button>
+      </div>
+    </form>
   );
 }

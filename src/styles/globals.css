@@ -39,6 +39,15 @@
   --sidebar-accent-foreground: #000000;
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: #f59e0b;
+
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --dialog-background: #ffffff;
+  --dialog-border: rgba(0, 0, 0, 0.1);
+
+  /* Pastikan warna background untuk dialog */
+  --popover: #ffffff;
+  --card: #ffffff;
 }
 
 .dark {
@@ -76,6 +85,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  --dialog-background: oklch(0.145 0 0);
+  --dialog-border: oklch(0.269 0 0);
+  --popover: oklch(0.145 0 0);
+  --card: oklch(0.145 0 0);
 }
 
 @theme inline {
@@ -121,12 +135,25 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply outline-ring/50;
   }
 
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Pastikan input memiliki background yang tepat */
+input,
+textarea,
+select {
+  background-color: var(--input-background) !important;
+}
+
+/* Styling untuk dialog */
+.dialog-content {
+  background-color: var(--dialog-background) !important;
+  border: 1px solid var(--dialog-border) !important;
 }
 
 /**
