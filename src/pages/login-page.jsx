@@ -39,6 +39,7 @@ export function LoginPage({ onNavigateToRegister }) {
     <div className="flex min-h-screen items-center justify-center bg-accent p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
+          <CardTitle>Login LasalleServe</CardTitle>
           <div className="flex justify-center mb-4">
             <img
               src={logoDelasalle}
@@ -46,10 +47,6 @@ export function LoginPage({ onNavigateToRegister }) {
               style={{ width: "100px", height: "auto" }}
             />
           </div>
-          <CardTitle>Login LasalleServe</CardTitle>
-          <CardDescription>
-            Masukkan email dan password Anda untuk mengakses sistem
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

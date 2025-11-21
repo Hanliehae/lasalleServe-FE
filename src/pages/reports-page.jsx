@@ -1,16 +1,16 @@
-import { useMemo, useState } from 'react';
-import { AlertTriangle, Eye, Plus, Search } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { AlertTriangle, Eye, Plus, Search } from "lucide-react";
 
-import { ImageWithFallback } from '../components/common/ImageWithFallback.jsx';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardDescription,
   CardTitle,
-} from '../components/ui/card';
+} from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,16 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+} from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
+} from "../components/ui/select";
 import {
   Table,
   TableBody,
@@ -35,44 +35,44 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table';
-import { Textarea } from '../components/ui/textarea';
-import { useAuth } from '../context/auth-context.jsx';
-import { mockDamageReports, mockAssets } from '../lib/mock-data.js';
+} from "../components/ui/table";
+import { Textarea } from "../components/ui/textarea";
+import { useAuth } from "../context/auth-context.jsx";
+import { mockDamageReports, mockAssets } from "../lib/mock-data.js";
 
-const MANAGER_ROLES = ['staf_buf', 'admin_buf'];
+const MANAGER_ROLES = ["staf_buf", "admin_buf"];
 const STATUS_OPTIONS = [
-  { value: 'menunggu', label: 'Menunggu' },
-  { value: 'dalam_perbaikan', label: 'Dalam Perbaikan' },
-  { value: 'selesai', label: 'Selesai' },
+  { value: "menunggu", label: "Menunggu" },
+  { value: "dalam_perbaikan", label: "Dalam Perbaikan" },
+  { value: "selesai", label: "Selesai" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: 'rendah', label: 'Rendah' },
-  { value: 'sedang', label: 'Sedang' },
-  { value: 'tinggi', label: 'Tinggi' },
+  { value: "rendah", label: "Rendah" },
+  { value: "sedang", label: "Sedang" },
+  { value: "tinggi", label: "Tinggi" },
 ];
 
 const STATUS_BADGE_VARIANTS = {
-  menunggu: { variant: 'secondary', label: 'Menunggu' },
-  dalam_perbaikan: { variant: 'default', label: 'Dalam Perbaikan' },
-  selesai: { variant: 'default', label: 'Selesai' },
+  menunggu: { variant: "secondary", label: "Menunggu" },
+  dalam_perbaikan: { variant: "default", label: "Dalam Perbaikan" },
+  selesai: { variant: "default", label: "Selesai" },
 };
 
 const PRIORITY_BADGE_VARIANTS = {
-  rendah: { variant: 'secondary', label: 'Rendah' },
-  sedang: { variant: 'default', label: 'Sedang' },
-  tinggi: { variant: 'destructive', label: 'Tinggi' },
+  rendah: { variant: "secondary", label: "Rendah" },
+  sedang: { variant: "default", label: "Sedang" },
+  tinggi: { variant: "destructive", label: "Tinggi" },
 };
 
 export function ReportsPage() {
   const { user } = useAuth();
   const [reports, setReports] = useState(mockDamageReports);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const canManage = MANAGER_ROLES.includes(user?.role ?? '');
+  const canManage = MANAGER_ROLES.includes(user?.role ?? "");
 
   const filteredReports = useMemo(() => {
     const keyword = searchTerm.toLowerCase();
@@ -81,7 +81,7 @@ export function ReportsPage() {
         report.assetName.toLowerCase().includes(keyword) ||
         report.reporterName.toLowerCase().includes(keyword);
       const matchesStatus =
-        statusFilter === 'all' || report.status === statusFilter;
+        statusFilter === "all" || report.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [reports, searchTerm, statusFilter]);
@@ -94,12 +94,12 @@ export function ReportsPage() {
 
     const newReport = {
       id: `r${reports.length + 1}`,
-      assetId: formData.assetId ?? '',
-      assetName: asset?.name ?? '',
-      reportedBy: user?.id ?? '',
-      reporterName: user?.name ?? 'Pengguna',
-      description: formData.description ?? '',
-      priority: formData.priority ?? 'sedang',
+      assetId: formData.assetId ?? "",
+      assetName: asset?.name ?? "",
+      reportedBy: user?.id ?? "",
+      reporterName: user?.name ?? "Pengguna",
+      description: formData.description ?? "",
+      priority: formData.priority ?? "sedang",
       status: "menunggu",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -187,7 +187,10 @@ export function ReportsPage() {
               Laporkan kerusakan yang ditemukan pada aset.
             </DialogDescription>
           </DialogHeader>
-          <ReportForm onSubmit={handleCreateReport} onCancel={() => setIsDialogOpen(false)} />
+          <ReportForm
+            onSubmit={handleCreateReport}
+            onCancel={() => setIsDialogOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
@@ -195,7 +198,12 @@ export function ReportsPage() {
 }
 
 /* ReportForm skeleton (tanpa tipe) */
-function ReportsTable({ reports, canManage, onUpdateStatus, onUpdatePriority }) {
+function ReportsTable({
+  reports,
+  canManage,
+  onUpdateStatus,
+  onUpdatePriority,
+}) {
   if (reports.length === 0) {
     return (
       <div className="rounded-md border p-8 text-center text-muted-foreground">
@@ -260,13 +268,15 @@ function ReportsTable({ reports, canManage, onUpdateStatus, onUpdatePriority }) 
                   <StatusBadge value={report.status} />
                 </TableCell>
                 <TableCell>
-                  {new Date(report.createdAt).toLocaleDateString('id-ID')}
+                  {new Date(report.createdAt).toLocaleDateString("id-ID")}
                 </TableCell>
                 {canManage && (
                   <TableCell>
                     <Select
                       value={report.status}
-                      onValueChange={(value) => onUpdateStatus(report.id, value)}
+                      onValueChange={(value) =>
+                        onUpdateStatus(report.id, value)
+                      }
                     >
                       <SelectTrigger className="w-[160px]">
                         <SelectValue />
@@ -360,9 +370,9 @@ function DetailField({ label, value, children }) {
 
 function ReportForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    assetId: '',
-    description: '',
-    priority: 'sedang',
+    assetId: "",
+    description: "",
+    priority: "sedang",
   });
 
   const handleSubmit = (event) => {

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   AlertTriangle,
   Calendar,
@@ -6,174 +6,174 @@ import {
   Clock,
   Package,
   TrendingDown,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Button } from '../components/ui/button';
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import { useAuth } from '../context/auth-context.jsx';
-import { getMockDashboardStats } from '../lib/mock-data.js';
+} from "../components/ui/card";
+import { useAuth } from "../context/auth-context.jsx";
+import { getMockDashboardStats } from "../lib/mock-data.js";
 
 const STAT_TEMPLATES = {
-  totalAssets: { title: 'Total Aset', icon: Package, color: 'text-blue-600' },
+  totalAssets: { title: "Total Aset", icon: Package, color: "text-blue-600" },
   totalLoans: {
-    title: 'Total Peminjaman',
+    title: "Total Peminjaman",
     icon: ClipboardList,
-    color: 'text-green-600',
+    color: "text-green-600",
   },
   totalReports: {
-    title: 'Laporan Kerusakan',
+    title: "Laporan Kerusakan",
     icon: AlertTriangle,
-    color: 'text-orange-600',
+    color: "text-orange-600",
   },
   lowStockAssets: {
-    title: 'Stok Rendah',
+    title: "Stok Rendah",
     icon: TrendingDown,
-    color: 'text-red-600',
+    color: "text-red-600",
   },
   pendingLoans: {
-    title: 'Permintaan Pending',
+    title: "Permintaan Menunggu",
     icon: Clock,
-    color: 'text-yellow-600',
+    color: "text-yellow-600",
   },
   activeLoans: {
-    title: 'Peminjaman Aktif',
+    title: "Peminjaman Aktif",
     icon: ClipboardList,
-    color: 'text-green-600',
+    color: "text-green-600",
   },
   pendingReports: {
-    title: 'Laporan Pending',
+    title: "Laporan Menunggu",
     icon: AlertTriangle,
-    color: 'text-red-600',
+    color: "text-red-600",
   },
   overdueLoans: {
-    title: 'Pinjaman Jatuh Tempo',
+    title: "Pinjaman Jatuh Tempo",
     icon: Clock,
-    color: 'text-orange-600',
+    color: "text-orange-600",
   },
 };
 
 const ROLE_STAT_KEYS = {
-  kepala_buf: ['totalAssets', 'totalLoans', 'totalReports', 'lowStockAssets'],
-  admin_buf: ['totalAssets', 'pendingLoans', 'activeLoans', 'pendingReports'],
-  staf_buf: ['pendingLoans', 'pendingReports', 'activeLoans', 'overdueLoans'],
-  default: ['activeLoans', 'pendingLoans', 'totalAssets', 'totalReports'],
+  kepala_buf: ["totalAssets", "totalLoans", "totalReports", "lowStockAssets"],
+  admin_buf: ["totalAssets", "pendingLoans", "activeLoans", "pendingReports"],
+  staf_buf: ["pendingLoans", "pendingReports", "activeLoans", "overdueLoans"],
+  default: ["activeLoans", "pendingLoans", "totalAssets", "totalReports"],
 };
 
 const QUICK_ACTIONS = {
   civitas: [
     {
-      title: 'Ajukan Peminjaman Baru',
-      description: 'Pilih aset dan buat permintaan peminjaman',
+      title: "Ajukan Peminjaman Baru",
+      description: "Pilih aset dan buat permintaan peminjaman",
     },
     {
-      title: 'Lapor Kerusakan',
-      description: 'Laporkan kerusakan aset yang ditemukan',
+      title: "Lapor Kerusakan",
+      description: "Laporkan kerusakan aset yang ditemukan",
     },
   ],
   mahasiswa: [
     {
-      title: 'Ajukan Peminjaman Baru',
-      description: 'Pilih aset dan buat permintaan peminjaman',
+      title: "Ajukan Peminjaman Baru",
+      description: "Pilih aset dan buat permintaan peminjaman",
     },
     {
-      title: 'Lapor Kerusakan',
-      description: 'Laporkan kerusakan aset yang ditemukan',
+      title: "Lapor Kerusakan",
+      description: "Laporkan kerusakan aset yang ditemukan",
     },
   ],
   dosen: [
     {
-      title: 'Ajukan Peminjaman Baru',
-      description: 'Pilih aset dan buat permintaan peminjaman',
+      title: "Ajukan Peminjaman Baru",
+      description: "Pilih aset dan buat permintaan peminjaman",
     },
     {
-      title: 'Lapor Kerusakan',
-      description: 'Laporkan kerusakan aset yang ditemukan',
+      title: "Lapor Kerusakan",
+      description: "Laporkan kerusakan aset yang ditemukan",
     },
   ],
   staf: [
     {
-      title: 'Ajukan Peminjaman Baru',
-      description: 'Pilih aset dan buat permintaan peminjaman',
+      title: "Ajukan Peminjaman Baru",
+      description: "Pilih aset dan buat permintaan peminjaman",
     },
     {
-      title: 'Lapor Kerusakan',
-      description: 'Laporkan kerusakan aset yang ditemukan',
+      title: "Lapor Kerusakan",
+      description: "Laporkan kerusakan aset yang ditemukan",
     },
   ],
   staf_buf: [
     {
-      title: 'Validasi Peminjaman',
-      description: 'Review dan approve permintaan peminjaman',
+      title: "Validasi Peminjaman",
+      description: "Review dan approve permintaan peminjaman",
     },
     {
-      title: 'Kelola Aset',
-      description: 'Tambah atau update data aset',
+      title: "Kelola Aset",
+      description: "Tambah atau update data aset",
     },
   ],
   admin_buf: [
     {
-      title: 'Validasi Peminjaman',
-      description: 'Review dan approve permintaan peminjaman',
+      title: "Validasi Peminjaman",
+      description: "Review dan approve permintaan peminjaman",
     },
     {
-      title: 'Kelola Aset',
-      description: 'Tambah atau update data aset',
+      title: "Kelola Aset",
+      description: "Tambah atau update data aset",
     },
   ],
   kepala_buf: [
     {
-      title: 'Ekspor Laporan',
-      description: 'Download laporan peminjaman dan kerusakan',
+      title: "Ekspor Laporan",
+      description: "Download laporan peminjaman dan kerusakan",
     },
     {
-      title: 'Lihat Ringkasan',
-      description: 'Analisis data peminjaman dan aset',
+      title: "Lihat Ringkasan",
+      description: "Analisis data peminjaman dan aset",
     },
   ],
   default: [
     {
-      title: 'Ajukan Peminjaman Baru',
-      description: 'Pilih aset dan buat permintaan peminjaman',
+      title: "Ajukan Peminjaman Baru",
+      description: "Pilih aset dan buat permintaan peminjaman",
     },
     {
-      title: 'Lapor Kerusakan',
-      description: 'Laporkan kerusakan aset yang ditemukan',
+      title: "Lapor Kerusakan",
+      description: "Laporkan kerusakan aset yang ditemukan",
     },
   ],
 };
 
 const ACTIVITY_LOGS = [
   {
-    statusColor: 'bg-green-600',
-    title: 'Peminjaman disetujui',
-    description: 'Ruang Seminar A - 2 jam yang lalu',
+    statusColor: "bg-green-600",
+    title: "Peminjaman disetujui",
+    description: "Ruang Seminar A - 2 jam yang lalu",
   },
   {
-    statusColor: 'bg-yellow-600',
-    title: 'Permintaan baru masuk',
-    description: 'Proyektor LCD (2 unit) - 3 jam yang lalu',
+    statusColor: "bg-yellow-600",
+    title: "Permintaan baru masuk",
+    description: "Proyektor LCD (2 unit) - 3 jam yang lalu",
   },
   {
-    statusColor: 'bg-red-600',
-    title: 'Laporan kerusakan',
-    description: 'Laptop Dell - 5 jam yang lalu',
+    statusColor: "bg-red-600",
+    title: "Laporan kerusakan",
+    description: "Laptop Dell - 5 jam yang lalu",
   },
   {
-    statusColor: 'bg-blue-600',
-    title: 'Aset dikembalikan',
-    description: 'Sound System - 1 hari yang lalu',
+    statusColor: "bg-blue-600",
+    title: "Aset dikembalikan",
+    description: "Sound System - 1 hari yang lalu",
   },
 ];
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const role = user?.role ?? 'default';
+  const role = user?.role ?? "default";
   const stats = getMockDashboardStats(role);
 
   const statCards = useMemo(() => {
@@ -198,9 +198,9 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1>Dashboard</h1>
+        <h1>Beranda</h1>
         <p className="text-muted-foreground mt-2">
-          Selamat datang, {user?.name ?? 'Pengguna'}
+          Selamat datang, {user?.name ?? "Pengguna"}
         </p>
       </header>
 
