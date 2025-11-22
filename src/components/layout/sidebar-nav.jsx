@@ -1,67 +1,106 @@
-import { useAuth } from '../../context/auth-context.jsx';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ClipboardList, 
-  AlertTriangle, 
+import { useAuth } from "../../context/auth-context.jsx";
+import {
+  LayoutDashboard,
+  Package,
+  ClipboardList,
+  AlertTriangle,
   History,
   FileText,
   LogOut,
   Settings,
-  TrendingUp
-} from 'lucide-react';
-import { Button } from '../ui/button';
+  TrendingUp,
+  CheckCircle,
+} from "lucide-react";
+import { Button } from "../ui/button";
 
 const navItems = [
   {
-    title: 'Dashboard',
-    href: '/',
+    title: "Dashboard",
+    href: "/",
     icon: LayoutDashboard,
-    roles: ['civitas', 'dosen', 'mahasiswa', 'staf', 'staf_buf', 'admin_buf', 'kepala_buf'],
+    roles: [
+      "civitas",
+      "dosen",
+      "mahasiswa",
+      "staf",
+      "staf_buf",
+      "admin_buf",
+      "kepala_buf",
+    ],
   },
   {
-    title: 'Aset',
-    href: '/assets',
+    title: "Aset",
+    href: "/assets",
     icon: Package,
-    roles: ['civitas', 'dosen', 'mahasiswa', 'staf', 'staf_buf', 'admin_buf', 'kepala_buf'],
+    roles: [
+      "civitas",
+      "dosen",
+      "mahasiswa",
+      "staf",
+      "staf_buf",
+      "admin_buf",
+      "kepala_buf",
+    ],
   },
   {
-    title: 'Peminjaman',
-    href: '/loans',
+    title: "Peminjaman",
+    href: "/loans",
     icon: ClipboardList,
-    roles: ['civitas', 'dosen', 'mahasiswa', 'staf', 'staf_buf', 'admin_buf', 'kepala_buf'],
+    roles: [
+      "civitas",
+      "dosen",
+      "mahasiswa",
+      "staf",
+      "staf_buf",
+      "admin_buf",
+      "kepala_buf",
+    ],
   },
   {
-    title: 'Laporan Kerusakan',
-    href: '/reports',
+    title: "Pengembalian",
+    href: "/return",
+    icon: CheckCircle, // Anda perlu import CheckCircle dari lucide-react
+    roles: ["staf_buf", "admin_buf"], // Hanya admin dan staf biro
+  },
+  {
+    title: "Laporan Kerusakan",
+    href: "/reports",
     icon: AlertTriangle,
-    roles: ['civitas', 'dosen', 'mahasiswa', 'staf', 'staf_buf', 'admin_buf', 'kepala_buf'],
+    roles: [
+      "civitas",
+      "dosen",
+      "mahasiswa",
+      "staf",
+      "staf_buf",
+      "admin_buf",
+      "kepala_buf",
+    ],
   },
   {
-    title: 'Riwayat Kerusakan',
-    href: '/damage-history',
+    title: "Riwayat Kerusakan",
+    href: "/damage-history",
     icon: TrendingUp,
-    roles: ['admin_buf', 'kepala_buf'],
+    roles: ["admin_buf", "kepala_buf"],
   },
   {
-    title: 'Riwayat Peminjaman',
-    href: '/history',
+    title: "Riwayat Peminjaman",
+    href: "/history",
     icon: History,
-    roles: ['civitas', 'dosen', 'mahasiswa', 'staf', 'staf_buf', 'admin_buf'],
+    roles: ["civitas", "dosen", "mahasiswa", "staf", "staf_buf", "admin_buf"],
   },
   {
-    title: 'Laporan Ekspor',
-    href: '/export',
+    title: "Laporan Ekspor",
+    href: "/export",
     icon: FileText,
-    roles: ['kepala_buf', 'admin_buf'],
+    roles: ["kepala_buf", "admin_buf"],
   },
 ];
 
 export function SidebarNav({ currentPath, onNavigate }) {
   const { user, logout } = useAuth();
 
-  const filteredNavItems = navItems.filter(item =>
-    item.roles.includes(user?.role || '')
+  const filteredNavItems = navItems.filter((item) =>
+    item.roles.includes(user?.role || "")
   );
 
   return (
@@ -69,22 +108,24 @@ export function SidebarNav({ currentPath, onNavigate }) {
       <div className="border-b p-6">
         <h2 className="truncate">BUF UKDLSM</h2>
         <p className="text-muted-foreground mt-1 truncate">{user?.name}</p>
-        <p className="text-muted-foreground mt-0.5 capitalize truncate">{user?.role?.replace('_', ' ')}</p>
+        <p className="text-muted-foreground mt-0.5 capitalize truncate">
+          {user?.role?.replace("_", " ")}
+        </p>
       </div>
-      
+
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.href;
-          
+
           return (
             <button
               key={item.href}
               onClick={() => onNavigate(item.href)}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-foreground hover:bg-accent'
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-accent"
               }`}
             >
               <Icon className="size-5 shrink-0" />
@@ -98,7 +139,7 @@ export function SidebarNav({ currentPath, onNavigate }) {
         <Button
           variant="ghost"
           className="w-full justify-start gap-3"
-          onClick={() => onNavigate('/settings')}
+          onClick={() => onNavigate("/settings")}
         >
           <Settings className="size-5 shrink-0" />
           <span className="truncate">Pengaturan</span>
@@ -115,4 +156,3 @@ export function SidebarNav({ currentPath, onNavigate }) {
     </div>
   );
 }
-

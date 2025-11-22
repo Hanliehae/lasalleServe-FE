@@ -140,6 +140,7 @@ export const mockLoans = [
     purpose: 'Acara organisasi mahasiswa',
     createdAt: '2025-10-12T09:00:00Z',
     updatedAt: '2025-10-14T17:00:00Z',
+     returnedAt: '2025-10-14T17:00:00Z', 
   },
   {
     id: 'l4',
