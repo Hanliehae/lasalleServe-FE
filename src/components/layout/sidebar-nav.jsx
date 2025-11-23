@@ -60,7 +60,7 @@ const navItems = [
     title: "Pengembalian",
     href: "/return",
     icon: CheckCircle, // Anda perlu import CheckCircle dari lucide-react
-    roles: ["staf_buf", "admin_buf"], // Hanya admin dan staf biro
+    roles: ["mahasiswa", "dosen", "staf", "staf_buf", "admin_buf"], // Hanya admin dan staf biro
   },
   {
     title: "Laporan Kerusakan",

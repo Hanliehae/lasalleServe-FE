@@ -1,11 +1,5 @@
 import { useMemo, useState } from "react";
-
-import {
-  AlertTriangle,
-  Calendar,
-  Package,
-  TrendingUp,
-} from "lucide-react";
+import { AlertTriangle, Calendar, Package, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -21,7 +15,13 @@ import {
   Cell,
 } from "recharts";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import {
   Select,
   SelectContent,
@@ -29,9 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Label } from "../components/ui/label";
 
 import { useAuth } from "../context/auth-context.jsx";
-import { mockDamageReports, mockAssets } from "../lib/mock-data.js";
+import {
+  mockDamageReports,
+  mockAssets,
+  getAcademicYearOptions,
+  getAcademicYear,
+} from "../lib/mock-data.js";
 
 const PERIOD_OPTIONS = [
   { value: "7", label: "7 Hari Terakhir" },
@@ -71,18 +77,37 @@ const STAT_CARDS = [
   },
 ];
 
+// Tambahkan fungsi untuk mendapatkan tahun ajaran dari tanggal
+const getAcademicYearFromDate = (dateString) => {
+  const date = new Date(dateString);
+  return getAcademicYear(date);
+};
+
 export function DamageHistoryPage() {
   const { user } = useAuth();
   const [timePeriod, setTimePeriod] = useState("30");
+  const [academicYearFilter, setAcademicYearFilter] = useState("all");
 
   const filteredReports = useMemo(() => {
     const now = Date.now();
     const cutoff = now - Number(timePeriod) * 24 * 60 * 60 * 1000;
 
-    return mockDamageReports.filter(
+    let reports = mockDamageReports.filter(
       (report) => new Date(report.createdAt).getTime() >= cutoff
     );
-  }, [timePeriod]);
+
+    // Filter berdasarkan tahun ajaran
+    if (academicYearFilter !== "all") {
+      reports = reports.filter(
+        (report) =>
+          getAcademicYearFromDate(report.createdAt) === academicYearFilter
+      );
+    }
+
+    return reports;
+  }, [timePeriod, academicYearFilter]);
+
+  const academicYearOptions = getAcademicYearOptions();
 
   const priorityStats = useMemo(() => {
     return filteredReports.reduce(
@@ -170,13 +195,12 @@ export function DamageHistoryPage() {
         </p>
       </header>
 
-      <PeriodSelector value={timePeriod} onChange={setTimePeriod} />
-
-      <StatsOverview
-        timePeriod={timePeriod}
-        filteredReports={filteredReports}
-        priorityStats={priorityStats}
-        statusStats={statusStats}
+      <PeriodSelector
+        value={timePeriod}
+        onChange={setTimePeriod}
+        academicYearFilter={academicYearFilter}
+        setAcademicYearFilter={setAcademicYearFilter}
+        academicYearOptions={academicYearOptions}
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -216,55 +240,59 @@ export function DamageHistoryPage() {
    COMPONENTS
 -------------------------------------------------------------- */
 
-function PeriodSelector({ value, onChange }) {
+function PeriodSelector({
+  value,
+  onChange,
+  academicYearFilter,
+  setAcademicYearFilter,
+  academicYearOptions,
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Periode Waktu</CardTitle>
+        <CardTitle>Filter Laporan</CardTitle>
         <CardDescription>
-          Pilih periode untuk melihat statistik kerusakan
+          Pilih periode dan tahun ajaran untuk melihat statistik kerusakan
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIOD_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="period">Periode Waktu</Label>
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="academicYear">Tahun Ajaran</Label>
+          <Select
+            value={academicYearFilter}
+            onValueChange={setAcademicYearFilter}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Tahun Ajaran</SelectItem>
+              {academicYearOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </CardContent>
     </Card>
-  );
-}
-
-function StatsOverview({ timePeriod, filteredReports, priorityStats, statusStats }) {
-  return (
-    <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {STAT_CARDS.map(({ key, title, icon: Icon, getValue, description }) => (
-        <Card key={key}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {getValue(filteredReports, priorityStats, statusStats)}
-            </div>
-            {description && (
-              <p className="text-xs text-muted-foreground">
-                {description(timePeriod)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </section>
   );
 }
 
@@ -305,7 +333,9 @@ function ChartsSection({ priorityChartData, statusChartData }) {
       <Card>
         <CardHeader>
           <CardTitle>Status Laporan</CardTitle>
-          <CardDescription>Distribusi status penanganan laporan</CardDescription>
+          <CardDescription>
+            Distribusi status penanganan laporan
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -328,7 +358,9 @@ function TrendChart({ data }) {
     <Card>
       <CardHeader>
         <CardTitle>Trend Laporan Kerusakan</CardTitle>
-        <CardDescription>Perkembangan jumlah laporan per minggu</CardDescription>
+        <CardDescription>
+          Perkembangan jumlah laporan per minggu
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>

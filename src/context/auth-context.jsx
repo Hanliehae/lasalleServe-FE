@@ -1,48 +1,48 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEYS = {
-  USER: 'buf_user',
-  TOKEN: 'buf_token',
+  USER: "buf_user",
+  TOKEN: "buf_token",
 };
 
 const mockUsers = [
   {
-    id: '1',
-    name: 'Admin BUF',
-    email: 'admin@buf.ac.id',
-    password: 'admin123',
-    role: 'admin_buf',
+    id: "1",
+    name: "Admin BUF",
+    email: "admin@buf.ac.id",
+    password: "admin123",
+    role: "admin_buf",
   },
   {
-    id: '2',
-    name: 'Staf BUF',
-    email: 'staf@buf.ac.id',
-    password: 'staf123',
-    role: 'staf_buf',
+    id: "2",
+    name: "Staf BUF",
+    email: "staf@buf.ac.id",
+    password: "staf123",
+    role: "staf_buf",
   },
   {
-    id: '3',
-    name: 'Kepala BUF',
-    email: 'kepala@buf.ac.id',
-    password: 'kepala123',
-    role: 'kepala_buf',
+    id: "3",
+    name: "Kepala BUF",
+    email: "kepala@buf.ac.id",
+    password: "kepala123",
+    role: "kepala_buf",
   },
   {
-    id: '4',
-    name: 'Mahasiswa Test',
-    email: 'mahasiswa@student.ac.id',
-    password: 'mhs123',
-    role: 'mahasiswa',
-    ktmUrl: 'https://example.com/ktm.jpg',
-    department: 'Teknik Informatika',
+    id: "4",
+    name: "Mahasiswa Test",
+    email: "mahasiswa@student.ac.id",
+    password: "mhs123",
+    role: "mahasiswa",
+    ktmUrl: "https://example.com/ktm.jpg",
+    department: "Teknik Informatika",
   },
   {
-    id: '5',
-    name: 'Dosen Test',
-    email: 'dosen@lecturer.ac.id',
-    password: 'dosen123',
-    role: 'dosen',
-    department: 'Fakultas Teknik',
+    id: "5",
+    name: "Dosen Test",
+    email: "dosen@lecturer.ac.id",
+    password: "dosen123",
+    role: "dosen",
+    department: "Fakultas Teknik",
   },
 ];
 
@@ -85,7 +85,7 @@ export function AuthProvider({ children }) {
     );
 
     if (!matchedUser) {
-      throw new Error('Email atau password salah');
+      throw new Error("Email atau password salah");
     }
 
     // Simulasi token backend
@@ -96,19 +96,39 @@ export function AuthProvider({ children }) {
     persistSession(safeUserData, accessToken);
   };
 
-  const register = async ({ name, email, role, ktmUrl, department }) => {
+  // Di dalam auth-context.jsx, tambahkan fungsi register
+  const register = async (userData) => {
+    // Simulasi delay network
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Validasi email unik
+    const existingUser = mockUsers.find(
+      (user) => user.email === userData.email
+    );
+    if (existingUser) {
+      throw new Error("Email sudah terdaftar");
+    }
+
+    // Buat user baru
     const newUser = {
-      id: `${Date.now()}`,
-      name,
-      email,
-      role,
-      ktmUrl,
-      department,
+      id: String(mockUsers.length + 1),
+      name: userData.name,
+      email: userData.email,
+      password: userData.password, // Dalam real app, ini harus di-hash
+      role: userData.role,
+      department: userData.department,
+      studentId: userData.studentId,
+      phone: userData.phone,
+      ktmUrl: userData.ktmUrl,
+      createdAt: new Date().toISOString(),
     };
 
-    const accessToken = `mock_token_${newUser.id}_${Date.now()}`;
+    mockUsers.push(newUser);
 
-    persistSession(newUser, accessToken);
+    // Auto login setelah register
+    setUser(newUser);
+    setIsAuthenticated(true);
+    localStorage.setItem("auth_user", JSON.stringify(newUser));
   };
 
   const logout = () => {
@@ -134,8 +154,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
-

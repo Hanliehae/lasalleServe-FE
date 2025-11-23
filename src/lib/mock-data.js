@@ -1,3 +1,27 @@
+export const getAcademicYear = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // 1-12
+  // Tahun ajaran: Juli tahun sekarang - Juni tahun berikutnya
+  return month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+};
+
+export const getAcademicYearFromDate = (dateString) => {
+  const date = new Date(dateString);
+  return getAcademicYear(date);
+};
+
+export const getAcademicYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  const options = [];
+  
+  for (let i = 2020; i <= currentYear + 1; i++) {
+    options.push(`${i}/${i + 1}`);
+  }
+  
+  return options.reverse();
+};
+
+
 export const mockAssets = [
   {
     id: 'a1',
@@ -108,9 +132,12 @@ export const mockLoans = [
     borrowerName: 'Mahasiswa Test',
     facilities: [{ id: 'a3', name: 'Proyektor LCD', quantity: 2 }],
     startDate: '2025-10-15',
-    endDate: '2025-10-17',
+    startTime: '08:00',
+    endDate: '2025-10-17', 
+    endTime: '17:00',
     status: 'menunggu',
     purpose: 'Untuk seminar proposal skripsi',
+    academicYear: '2025/2026',
     createdAt: '2025-10-13T10:00:00Z',
     updatedAt: '2025-10-13T10:00:00Z',
   },

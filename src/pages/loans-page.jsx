@@ -272,6 +272,12 @@ export function LoansPage() {
                     <TableCell>
                       <LoanDate value={loan.endDate} />
                     </TableCell>
+                    <TableCell>
+                      <LoanDate value={loan.startDate} time={loan.startTime} />
+                    </TableCell>
+                    <TableCell>
+                      <LoanDate value={loan.endDate} time={loan.endTime} />
+                    </TableCell>
                     <TableCell>{renderStatusBadge(loan.status)}</TableCell>
                     {canApprove && loan.status === "menunggu" && (
                       <TableCell>
@@ -333,11 +339,14 @@ function LoanAssetDetails({ loan }) {
   );
 }
 
-function LoanDate({ value }) {
+function LoanDate({ value, time }) {
   return (
     <div className="flex items-center gap-2">
       <Calendar className="size-4 text-muted-foreground" />
-      {new Date(value).toLocaleDateString("id-ID")}
+      <div>
+        <div>{new Date(value).toLocaleDateString("id-ID")}</div>
+        {time && <div className="text-sm text-muted-foreground">{time}</div>}
+      </div>
     </div>
   );
 }
@@ -349,7 +358,9 @@ function RoomLoanForm({ onSubmit, onCancel }) {
     roomId: "",
     roomName: "",
     startDate: "",
+    startTime: "08:00",
     endDate: "",
+    endTime: "17:00",
     purpose: "",
     facilities: [],
   });
@@ -482,12 +493,37 @@ function RoomLoanForm({ onSubmit, onCancel }) {
           />
         </div>
         <div className="space-y-2">
+          <Label>Waktu Mulai</Label>
+          <Input
+            type="time"
+            value={formData.startTime}
+            onChange={(event) =>
+              handleFieldChange("startTime", event.target.value)
+            }
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
           <Label>Tanggal Selesai</Label>
           <Input
             type="date"
             value={formData.endDate}
             onChange={(event) =>
               handleFieldChange("endDate", event.target.value)
+            }
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Waktu Selesai</Label>
+          <Input
+            type="time"
+            value={formData.endTime}
+            onChange={(event) =>
+              handleFieldChange("endTime", event.target.value)
             }
             required
           />
@@ -618,7 +654,9 @@ function RoomLoanForm({ onSubmit, onCancel }) {
 function FacilityLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     startDate: "",
+    startTime: "08:00",
     endDate: "",
+    endTime: "17:00",
     purpose: "",
     facilities: [],
   });
@@ -678,22 +716,50 @@ function FacilityLoanForm({ onSubmit, onCancel }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <div>
+        <div className="space-y-2">
           <Label>Tanggal Mulai</Label>
           <Input
             type="date"
             value={formData.startDate}
-            onChange={(e) => handleFieldChange("startDate", e.target.value)}
+            onChange={(event) =>
+              handleFieldChange("startDate", event.target.value)
+            }
             required
           />
         </div>
+        <div className="space-y-2">
+          <Label>Waktu Mulai</Label>
+          <Input
+            type="time"
+            value={formData.startTime}
+            onChange={(event) =>
+              handleFieldChange("startTime", event.target.value)
+            }
+            required
+          />
+        </div>
+      </div>
 
-        <div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
           <Label>Tanggal Selesai</Label>
           <Input
             type="date"
             value={formData.endDate}
-            onChange={(e) => handleFieldChange("endDate", e.target.value)}
+            onChange={(event) =>
+              handleFieldChange("endDate", event.target.value)
+            }
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Waktu Selesai</Label>
+          <Input
+            type="time"
+            value={formData.endTime}
+            onChange={(event) =>
+              handleFieldChange("endTime", event.target.value)
+            }
             required
           />
         </div>

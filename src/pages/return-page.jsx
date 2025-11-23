@@ -8,6 +8,7 @@ import {
   User,
   Clock,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 
 import { useAuth } from "../context/auth-context.jsx";
@@ -49,6 +50,7 @@ import {
 import { Checkbox } from "../components/ui/checkbox";
 
 const APPROVER_ROLES = ["staf_buf", "admin_buf"];
+const BORROWER_ROLES = ["mahasiswa", "dosen", "staf", "civitas"];
 
 export function ReturnPage() {
   const { user } = useAuth();
@@ -58,6 +60,7 @@ export function ReturnPage() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [returnData, setReturnData] = useState({
     returnedItems: [],
     notes: "",
@@ -65,13 +68,21 @@ export function ReturnPage() {
   });
 
   const canApprove = APPROVER_ROLES.includes(user?.role ?? "");
+  const isBorrower = BORROWER_ROLES.includes(user?.role ?? "");
 
-  // Filter peminjaman yang sudah disetujui dan sedang berjalan atau sudah selesai
+  // Filter peminjaman berdasarkan role
   const eligibleLoans = useMemo(() => {
-    return loans.filter(
+    let filtered = loans.filter(
       (loan) => loan.status === "disetujui" || loan.status === "selesai"
     );
-  }, [loans]);
+
+    // Untuk borrower, hanya tampilkan peminjaman mereka sendiri
+    if (isBorrower && !canApprove) {
+      filtered = filtered.filter((loan) => loan.borrowerId === user?.id);
+    }
+
+    return filtered;
+  }, [loans, user?.id, isBorrower, canApprove]);
 
   const filteredLoans = useMemo(() => {
     const keyword = searchTerm.toLowerCase();
@@ -88,19 +99,18 @@ export function ReturnPage() {
       // Filter berdasarkan status pengembalian
       let matchesStatus = true;
       if (statusFilter === "pending") {
-        // Peminjaman yang masih berjalan atau sudah lewat tanggal selesai
         matchesStatus = loan.endDate >= today && loan.status === "disetujui";
       } else if (statusFilter === "overdue") {
-        // Peminjaman yang sudah lewat tanggal selesai
         matchesStatus = loan.endDate < today && loan.status === "disetujui";
       } else if (statusFilter === "returned") {
-        // Peminjaman yang sudah dikembalikan
         matchesStatus = loan.status === "selesai";
+      } else if (statusFilter === "my_loans") {
+        matchesStatus = loan.borrowerId === user?.id;
       }
 
       return matchesSearch && matchesStatus;
     });
-  }, [eligibleLoans, searchTerm, statusFilter]);
+  }, [eligibleLoans, searchTerm, statusFilter, user?.id]);
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
@@ -146,6 +156,11 @@ export function ReturnPage() {
     setIsReturnDialogOpen(true);
   };
 
+  const handleOpenDetailDialog = (loan) => {
+    setSelectedLoan(loan);
+    setIsDetailDialogOpen(true);
+  };
+
   const handleItemReturnToggle = (itemId, returned) => {
     setReturnData((prev) => ({
       ...prev,
@@ -167,38 +182,54 @@ export function ReturnPage() {
   const handleReturnSubmit = () => {
     if (!selectedLoan) return;
 
-    // Update status peminjaman menjadi selesai
-    const updatedLoans = loans.map((loan) =>
-      loan.id === selectedLoan.id
-        ? { ...loan, status: "selesai", returnedAt: new Date().toISOString() }
-        : loan
-    );
+    // Untuk borrower: ajukan pengembalian
+    if (isBorrower && !canApprove) {
+      const updatedLoans = loans.map((loan) =>
+        loan.id === selectedLoan.id
+          ? {
+              ...loan,
+              status: "menunggu_pengembalian",
+              returnRequestedAt: new Date().toISOString(),
+              returnNotes: returnData.notes,
+            }
+          : loan
+      );
+      setLoans(updatedLoans);
+    } else {
+      // Untuk admin: konfirmasi pengembalian
+      const updatedLoans = loans.map((loan) =>
+        loan.id === selectedLoan.id
+          ? { ...loan, status: "selesai", returnedAt: new Date().toISOString() }
+          : loan
+      );
 
-    // Update stok aset berdasarkan item yang dikembalikan
-    const updatedAssets = [...assets];
+      const updatedAssets = [...assets];
 
-    returnData.returnedItems.forEach((returnedItem) => {
-      if (returnedItem.returned) {
-        const assetIndex = updatedAssets.findIndex(
-          (asset) => asset.id === returnedItem.id
-        );
-        if (assetIndex !== -1) {
-          // Tambah stok yang tersedia
-          updatedAssets[assetIndex] = {
-            ...updatedAssets[assetIndex],
-            availableStock:
-              updatedAssets[assetIndex].availableStock + returnedItem.quantity,
-            // Update kondisi jika berbeda
-            ...(returnedItem.condition !== "baik" && {
-              condition: returnedItem.condition,
-            }),
-          };
+      returnData.returnedItems.forEach((returnedItem) => {
+        if (returnedItem.returned) {
+          const assetIndex = updatedAssets.findIndex(
+            (asset) => asset.id === returnedItem.id
+          );
+          if (assetIndex !== -1) {
+            // Tambah stok yang tersedia
+            updatedAssets[assetIndex] = {
+              ...updatedAssets[assetIndex],
+              availableStock:
+                updatedAssets[assetIndex].availableStock +
+                returnedItem.quantity,
+              // Update kondisi jika berbeda
+              ...(returnedItem.condition !== "baik" && {
+                condition: returnedItem.condition,
+              }),
+            };
+          }
         }
-      }
-    });
+      });
 
-    setLoans(updatedLoans);
-    setAssets(updatedAssets);
+      setAssets(updatedAssets);
+      setLoans(updatedLoans);
+    }
+
     setIsReturnDialogOpen(false);
     setSelectedLoan(null);
   };
@@ -212,6 +243,12 @@ export function ReturnPage() {
         label: "Sudah Dikembalikan",
         variant: "outline",
       };
+    } else if (loan.status === "menunggu_pengembalian") {
+      return {
+        type: "waiting_return",
+        label: "Menunggu Konfirmasi",
+        variant: "secondary",
+      };
     } else if (loan.endDate < today) {
       return { type: "overdue", label: "Terlambat", variant: "destructive" };
     } else {
@@ -223,15 +260,38 @@ export function ReturnPage() {
     (item) => item.returned
   );
 
+  const statusOptions = canApprove
+    ? [
+        { value: "pending", label: "Sedang Dipinjam" },
+        { value: "overdue", label: "Terlambat" },
+        { value: "returned", label: "Sudah Dikembalikan" },
+        { value: "waiting_return", label: "Menunggu Konfirmasi" },
+      ]
+    : [
+        { value: "my_loans", label: "Peminjaman Saya" },
+        { value: "pending", label: "Sedang Dipinjam" },
+        { value: "returned", label: "Sudah Dikembalikan" },
+      ];
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1>Pengembalian Aset</h1>
           <p className="text-muted-foreground mt-2">
-            Kelola proses pengembalian ruangan dan fasilitas
+            {canApprove
+              ? "Kelola proses pengembalian ruangan dan fasilitas"
+              : "Lihat status pengembalian peminjaman Anda"}
           </p>
         </div>
+        {isBorrower && !canApprove && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              Untuk mengajukan pengembalian, silakan hubungi admin BUF dengan
+              membawa aset yang dipinjam.
+            </p>
+          </div>
+        )}
       </header>
 
       <Card>
@@ -242,7 +302,11 @@ export function ReturnPage() {
               <Input
                 value={searchTerm}
                 onChange={handleSearchChange}
-                placeholder="Cari peminjam, ruangan, atau fasilitas..."
+                placeholder={
+                  canApprove
+                    ? "Cari peminjam, ruangan, atau fasilitas..."
+                    : "Cari ruangan atau fasilitas..."
+                }
                 className="max-w-sm"
               />
             </div>
@@ -251,9 +315,11 @@ export function ReturnPage() {
                 <SelectValue placeholder="Status pengembalian" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Sedang Dipinjam</SelectItem>
-                <SelectItem value="overdue">Terlambat</SelectItem>
-                <SelectItem value="returned">Sudah Dikembalikan</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -264,7 +330,7 @@ export function ReturnPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Peminjam</TableHead>
+                  {canApprove && <TableHead>Peminjam</TableHead>}
                   <TableHead>Detail Aset</TableHead>
                   <TableHead>Tanggal Mulai</TableHead>
                   <TableHead>Tanggal Selesai</TableHead>
@@ -276,7 +342,7 @@ export function ReturnPage() {
                 {filteredLoans.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={canApprove ? 6 : 5}
                       className="text-center text-muted-foreground"
                     >
                       Tidak ada data pengembalian ditemukan
@@ -288,12 +354,14 @@ export function ReturnPage() {
                   const status = getLoanStatus(loan);
                   return (
                     <TableRow key={loan.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="size-4 text-muted-foreground" />
-                          {loan.borrowerName}
-                        </div>
-                      </TableCell>
+                      {canApprove && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="size-4 text-muted-foreground" />
+                            {loan.borrowerName}
+                          </div>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <LoanAssetDetails loan={loan} />
                       </TableCell>
@@ -313,24 +381,37 @@ export function ReturnPage() {
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        {loan.status === "disetujui" && canApprove && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenReturnDialog(loan)}
-                          >
-                            <CheckCircle className="mr-1 size-4" />
-                            Proses Pengembalian
-                          </Button>
-                        )}
-                        {loan.status === "selesai" && (
-                          <span className="text-sm text-muted-foreground">
-                            Dikembalikan:{" "}
-                            {new Date(loan.returnedAt).toLocaleDateString(
-                              "id-ID"
+                        <div className="flex gap-2">
+                          {canApprove && loan.status === "disetujui" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenReturnDialog(loan)}
+                            >
+                              <CheckCircle className="mr-1 size-4" />
+                              Proses Pengembalian
+                            </Button>
+                          )}
+                          {canApprove &&
+                            loan.status === "menunggu_pengembalian" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenReturnDialog(loan)}
+                              >
+                                <CheckCircle className="mr-1 size-4" />
+                                Konfirmasi
+                              </Button>
                             )}
-                          </span>
-                        )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenDetailDialog(loan)}
+                          >
+                            <Eye className="mr-1 size-4" />
+                            Detail
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -341,169 +422,249 @@ export function ReturnPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog Proses Pengembalian */}
-      <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
+      {/* Dialog Detail untuk semua user */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="sm:max-w-2xl bg-card">
           <DialogHeader>
-            <DialogTitle>Proses Pengembalian Aset</DialogTitle>
-            <DialogDescription>
-              Verifikasi kondisi fisik aset yang dikembalikan oleh{" "}
-              {selectedLoan?.borrowerName}
-            </DialogDescription>
+            <DialogTitle>Detail Peminjaman</DialogTitle>
           </DialogHeader>
-
           {selectedLoan && (
-            <div className="space-y-6">
-              {/* Informasi Peminjaman */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Detail Peminjaman</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Peminjam:</span>
-                      <p>{selectedLoan.borrowerName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Periode:</span>
-                      <p>
-                        {new Date(selectedLoan.startDate).toLocaleDateString(
-                          "id-ID"
-                        )}{" "}
-                        -{" "}
-                        {new Date(selectedLoan.endDate).toLocaleDateString(
-                          "id-ID"
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  {selectedLoan.purpose && (
-                    <div>
-                      <span className="font-medium">Keperluan:</span>
-                      <p className="text-muted-foreground">
-                        {selectedLoan.purpose}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Daftar Item yang Dipinjam */}
-              <div className="space-y-4">
-                <Label>Daftar Aset yang Dipinjam</Label>
-                <div className="space-y-3">
-                  {returnData.returnedItems.map((item) => (
-                    <Card key={item.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={item.returned}
-                              onCheckedChange={(checked) =>
-                                handleItemReturnToggle(item.id, checked)
-                              }
-                            />
-                            <div>
-                              <p className="font-medium">{item.name}</p>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span>
-                                  {item.type === "room"
-                                    ? "Ruangan"
-                                    : "Fasilitas"}
-                                </span>
-                                <span>Jumlah: {item.quantity}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {item.returned && (
-                            <Select
-                              value={item.condition}
-                              onValueChange={(value) =>
-                                handleItemConditionChange(item.id, value)
-                              }
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="baik">Baik</SelectItem>
-                                <SelectItem value="rusak_ringan">
-                                  Rusak Ringan
-                                </SelectItem>
-                                <SelectItem value="rusak_berat">
-                                  Rusak Berat
-                                </SelectItem>
-                                <SelectItem value="hilang">Hilang</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-
-                        {item.returned && item.condition !== "baik" && (
-                          <div className="mt-2 flex items-center gap-2 text-amber-600 text-sm">
-                            <AlertCircle className="size-4" />
-                            <span>
-                              {item.condition === "rusak_ringan" &&
-                                "Butuh perbaikan ringan"}
-                              {item.condition === "rusak_berat" &&
-                                "Butuh perbaikan berat"}
-                              {item.condition === "hilang" &&
-                                "Item hilang, perlu tindakan lebih lanjut"}
-                            </span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Peminjam</Label>
+                  <p>{selectedLoan.borrowerName}</p>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Badge variant={getLoanStatus(selectedLoan).variant}>
+                    {getLoanStatus(selectedLoan).label}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Tanggal Mulai</Label>
+                  <p>
+                    {new Date(selectedLoan.startDate).toLocaleDateString(
+                      "id-ID"
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <Label>Tanggal Selesai</Label>
+                  <p>
+                    {new Date(selectedLoan.endDate).toLocaleDateString("id-ID")}
+                  </p>
                 </div>
               </div>
 
-              {/* Catatan */}
-              <div className="space-y-2">
-                <Label>Catatan Pengembalian</Label>
-                <Input
-                  placeholder="Tambahkan catatan jika diperlukan..."
-                  value={returnData.notes}
-                  onChange={(e) =>
-                    setReturnData((prev) => ({
-                      ...prev,
-                      notes: e.target.value,
-                    }))
-                  }
-                />
-              </div>
+              {selectedLoan.roomName && (
+                <div>
+                  <Label>Ruangan</Label>
+                  <p>{selectedLoan.roomName}</p>
+                </div>
+              )}
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsReturnDialogOpen(false)}
-                >
-                  Batal
-                </Button>
-                <Button
-                  onClick={handleReturnSubmit}
-                  disabled={!allItemsReturned}
-                >
-                  <CheckCircle className="mr-2 size-4" />
-                  Konfirmasi Pengembalian
-                </Button>
-              </div>
+              {selectedLoan.facilities.length > 0 && (
+                <div>
+                  <Label>Fasilitas</Label>
+                  <ul className="list-disc list-inside">
+                    {selectedLoan.facilities.map((facility, index) => (
+                      <li key={index}>
+                        {facility.name} ({facility.quantity}x)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              {!allItemsReturned && (
-                <div className="flex items-center gap-2 text-amber-600 text-sm">
-                  <AlertCircle className="size-4" />
-                  <span>
-                    Centang semua item yang sudah dikembalikan untuk melanjutkan
-                  </span>
+              {selectedLoan.purpose && (
+                <div>
+                  <Label>Keperluan</Label>
+                  <p>{selectedLoan.purpose}</p>
+                </div>
+              )}
+
+              {selectedLoan.returnedAt && (
+                <div>
+                  <Label>Tanggal Dikembalikan</Label>
+                  <p>
+                    {new Date(selectedLoan.returnedAt).toLocaleDateString(
+                      "id-ID"
+                    )}
+                  </p>
                 </div>
               )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Proses Pengembalian (hanya untuk admin) */}
+      {canApprove && (
+        <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
+          <DialogContent className="sm:max-w-2xl bg-card">
+            <DialogHeader>
+              <DialogTitle>Proses Pengembalian Aset</DialogTitle>
+              <DialogDescription>
+                Verifikasi kondisi fisik aset yang dikembalikan oleh{" "}
+                {selectedLoan?.borrowerName}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedLoan && (
+              <div className="space-y-6">
+                {/* Informasi Peminjaman */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Detail Peminjaman</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Peminjam:</span>
+                        <p>{selectedLoan.borrowerName}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Periode:</span>
+                        <p>
+                          {new Date(selectedLoan.startDate).toLocaleDateString(
+                            "id-ID"
+                          )}{" "}
+                          -{" "}
+                          {new Date(selectedLoan.endDate).toLocaleDateString(
+                            "id-ID"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedLoan.purpose && (
+                      <div>
+                        <span className="font-medium">Keperluan:</span>
+                        <p className="text-muted-foreground">
+                          {selectedLoan.purpose}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Daftar Item yang Dipinjam */}
+                <div className="space-y-4">
+                  <Label>Daftar Aset yang Dipinjam</Label>
+                  <div className="space-y-3">
+                    {returnData.returnedItems.map((item) => (
+                      <Card key={item.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={item.returned}
+                                onCheckedChange={(checked) =>
+                                  handleItemReturnToggle(item.id, checked)
+                                }
+                              />
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span>
+                                    {item.type === "room"
+                                      ? "Ruangan"
+                                      : "Fasilitas"}
+                                  </span>
+                                  <span>Jumlah: {item.quantity}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {item.returned && (
+                              <Select
+                                value={item.condition}
+                                onValueChange={(value) =>
+                                  handleItemConditionChange(item.id, value)
+                                }
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="baik">Baik</SelectItem>
+                                  <SelectItem value="rusak_ringan">
+                                    Rusak Ringan
+                                  </SelectItem>
+                                  <SelectItem value="rusak_berat">
+                                    Rusak Berat
+                                  </SelectItem>
+                                  <SelectItem value="hilang">Hilang</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+
+                          {item.returned && item.condition !== "baik" && (
+                            <div className="mt-2 flex items-center gap-2 text-amber-600 text-sm">
+                              <AlertCircle className="size-4" />
+                              <span>
+                                {item.condition === "rusak_ringan" &&
+                                  "Butuh perbaikan ringan"}
+                                {item.condition === "rusak_berat" &&
+                                  "Butuh perbaikan berat"}
+                                {item.condition === "hilang" &&
+                                  "Item hilang, perlu tindakan lebih lanjut"}
+                              </span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Catatan */}
+                <div className="space-y-2">
+                  <Label>Catatan Pengembalian</Label>
+                  <Input
+                    placeholder="Tambahkan catatan jika diperlukan..."
+                    value={returnData.notes}
+                    onChange={(e) =>
+                      setReturnData((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsReturnDialogOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    onClick={handleReturnSubmit}
+                    disabled={!allItemsReturned}
+                  >
+                    <CheckCircle className="mr-2 size-4" />
+                    Konfirmasi Pengembalian
+                  </Button>
+                </div>
+
+                {!allItemsReturned && (
+                  <div className="flex items-center gap-2 text-amber-600 text-sm">
+                    <AlertCircle className="size-4" />
+                    <span>
+                      Centang semua item yang sudah dikembalikan untuk
+                      melanjutkan
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
