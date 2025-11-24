@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Eye, Plus, Search } from "lucide-react";
+import { AlertTriangle, Eye, Plus, Search, Edit } from "lucide-react";
 
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { Badge } from "../components/ui/badge";
@@ -40,7 +40,7 @@ import { Textarea } from "../components/ui/textarea";
 import { useAuth } from "../context/auth-context.jsx";
 import { mockDamageReports, mockAssets } from "../lib/mock-data.js";
 
-const MANAGER_ROLES = ["staf_buf", "admin_buf"];
+const MANAGER_ROLES = ["staf_buf", "admin_buf", "kepala_buf"];
 const STATUS_OPTIONS = [
   { value: "menunggu", label: "Menunggu" },
   { value: "dalam_perbaikan", label: "Dalam Perbaikan" },
@@ -70,9 +70,16 @@ export function ReportsPage() {
   const [reports, setReports] = useState(mockDamageReports);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const canManage = MANAGER_ROLES.includes(user?.role ?? "");
+  const canCreateReport = !["staf_buf", "admin_buf", "kepala_buf"].includes(
+    user?.role ?? ""
+  );
+  const canEditPriority = user?.role === "kepala_buf";
 
   const filteredReports = useMemo(() => {
     const keyword = searchTerm.toLowerCase();
@@ -82,12 +89,15 @@ export function ReportsPage() {
         report.reporterName.toLowerCase().includes(keyword);
       const matchesStatus =
         statusFilter === "all" || report.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesPriority =
+        priorityFilter === "all" || report.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
     });
-  }, [reports, searchTerm, statusFilter]);
+  }, [reports, searchTerm, statusFilter, priorityFilter]);
 
   const handleSearchChange = (event) => setSearchTerm(event.target.value);
   const handleStatusChange = (value) => setStatusFilter(value);
+  const handlePriorityChange = (value) => setPriorityFilter(value);
 
   const handleCreateReport = (formData) => {
     const asset = mockAssets.find((item) => item.id === formData.assetId);
@@ -127,19 +137,40 @@ export function ReportsPage() {
     );
   };
 
+  const handleEditReport = (report) => {
+    setEditingReport(report);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (updatedData) => {
+    setReports(
+      reports.map((r) =>
+        r.id === editingReport.id
+          ? { ...r, ...updatedData, updatedAt: new Date().toISOString() }
+          : r
+      )
+    );
+    setIsEditDialogOpen(false);
+    setEditingReport(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1>Laporan Kerusakan</h1>
           <p className="text-muted-foreground mt-2">
-            Kelola laporan kerusakan aset
+            {canManage
+              ? "Kelola laporan kerusakan aset"
+              : "Lihat laporan kerusakan yang Anda laporkan"}
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Lapor Kerusakan
-        </Button>
+        {canCreateReport && (
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Lapor Kerusakan
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -154,55 +185,102 @@ export function ReportsPage() {
                 className="max-w-sm"
               />
             </div>
-            <Select value={statusFilter} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={priorityFilter}
+                onValueChange={handlePriorityChange}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Prioritas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Prioritas</SelectItem>
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <ReportsTable
             reports={filteredReports}
             canManage={canManage}
+            canEditPriority={canEditPriority}
             onUpdateStatus={handleUpdateStatus}
             onUpdatePriority={handleUpdatePriority}
+            onEditReport={handleEditReport}
+            userRole={user?.role}
           />
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Lapor Kerusakan Aset</DialogTitle>
-            <DialogDescription>
-              Laporkan kerusakan yang ditemukan pada aset.
-            </DialogDescription>
-          </DialogHeader>
-          <ReportForm
-            onSubmit={handleCreateReport}
-            onCancel={() => setIsDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {canCreateReport && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Lapor Kerusakan Aset</DialogTitle>
+              <DialogDescription>
+                Laporkan kerusakan yang ditemukan pada aset.
+              </DialogDescription>
+            </DialogHeader>
+            <ReportForm
+              onSubmit={handleCreateReport}
+              onCancel={() => setIsDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog Edit untuk Kepala BUF */}
+      {editingReport && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Laporan Kerusakan</DialogTitle>
+              <DialogDescription>
+                Ubah status dan prioritas laporan kerusakan.
+              </DialogDescription>
+            </DialogHeader>
+            <EditReportForm
+              report={editingReport}
+              onSubmit={handleSaveEdit}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+                setEditingReport(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
 
-/* ReportForm skeleton (tanpa tipe) */
 function ReportsTable({
   reports,
   canManage,
+  canEditPriority,
   onUpdateStatus,
   onUpdatePriority,
+  onEditReport,
+  userRole,
 }) {
   if (reports.length === 0) {
     return (
@@ -224,8 +302,8 @@ function ReportsTable({
               <TableHead>Prioritas</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tanggal</TableHead>
-              {canManage && <TableHead>Aksi</TableHead>}
-              {canManage && <TableHead>Detail</TableHead>}
+              <TableHead>Detail</TableHead>
+              {userRole === "kepala_buf" && <TableHead>Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -242,7 +320,7 @@ function ReportsTable({
                   <p className="max-w-xs truncate">{report.description}</p>
                 </TableCell>
                 <TableCell>
-                  {canManage ? (
+                  {canEditPriority ? (
                     <Select
                       value={report.priority}
                       onValueChange={(value) =>
@@ -265,13 +343,7 @@ function ReportsTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge value={report.status} />
-                </TableCell>
-                <TableCell>
-                  {new Date(report.createdAt).toLocaleDateString("id-ID")}
-                </TableCell>
-                {canManage && (
-                  <TableCell>
+                  {canManage ? (
                     <Select
                       value={report.status}
                       onValueChange={(value) =>
@@ -289,11 +361,25 @@ function ReportsTable({
                         ))}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                )}
-                {canManage && (
+                  ) : (
+                    <StatusBadge value={report.status} />
+                  )}
+                </TableCell>
+                <TableCell>
+                  {new Date(report.createdAt).toLocaleDateString("id-ID")}
+                </TableCell>
+                <TableCell>
+                  <ReportDetailDialog report={report} />
+                </TableCell>
+                {userRole === "kepala_buf" && (
                   <TableCell>
-                    <ReportDetailDialog report={report} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEditReport(report)}
+                    >
+                      <Edit className="size-4" />
+                    </Button>
                   </TableCell>
                 )}
               </TableRow>
@@ -339,6 +425,14 @@ function ReportDetailDialog({ report }) {
             <StatusBadge value={report.status} />
           </DetailField>
           <DetailField label="Deskripsi" value={report.description} />
+          <DetailField
+            label="Tanggal Dilaporkan"
+            value={new Date(report.createdAt).toLocaleDateString("id-ID")}
+          />
+          <DetailField
+            label="Terakhir Diupdate"
+            value={new Date(report.updatedAt).toLocaleDateString("id-ID")}
+          />
           {report.photoUrl && (
             <div className="space-y-2">
               <Label>Foto Kerusakan</Label>
@@ -443,6 +537,112 @@ function ReportForm({ onSubmit, onCancel }) {
           Batal
         </Button>
         <Button type="submit">Submit</Button>
+      </div>
+    </form>
+  );
+}
+
+// Form Edit untuk Kepala BUF
+function EditReportForm({ report, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    priority: report.priority,
+    status: report.status,
+    notes: report.notes || "",
+  });
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Prioritas</Label>
+          <Select
+            value={formData.priority}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, priority: value }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITY_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Select
+            value={formData.status}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, status: value }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Catatan Tambahan (Opsional)</Label>
+        <Textarea
+          value={formData.notes}
+          onChange={(event) =>
+            setFormData((prev) => ({
+              ...prev,
+              notes: event.target.value,
+            }))
+          }
+          placeholder="Tambahkan catatan atau instruksi untuk tim..."
+          rows={3}
+        />
+      </div>
+
+      <div className="bg-muted p-3 rounded-md">
+        <h4 className="font-medium mb-2">Informasi Laporan</h4>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">Aset:</span>
+            <p>{report.assetName}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Pelapor:</span>
+            <p>{report.reporterName}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Deskripsi:</span>
+            <p className="truncate">{report.description}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Tanggal:</span>
+            <p>{new Date(report.createdAt).toLocaleDateString("id-ID")}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Batal
+        </Button>
+        <Button type="submit">Simpan Perubahan</Button>
       </div>
     </form>
   );

@@ -50,7 +50,7 @@ import {
 } from "../components/ui/table";
 import { Textarea } from "../components/ui/textarea";
 
-const CREATOR_ROLES = ["civitas", "mahasiswa", "dosen", "staf"];
+const CREATOR_ROLES = ["mahasiswa", "dosen", "staf"];
 const APPROVER_ROLES = ["staf_buf", "admin_buf"];
 
 const STATUS_BADGES = {

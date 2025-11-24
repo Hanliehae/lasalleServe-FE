@@ -110,26 +110,37 @@ const QUICK_ACTIONS = {
     {
       title: "Validasi Peminjaman",
       description: "Review dan approve permintaan peminjaman",
+      path: "/loans",
     },
+
     {
-      title: "Kelola Aset",
-      description: "Tambah atau update data aset",
+      title: "Proses Pengembalian",
+      description: "Kelola proses pengembalian aset",
+      path: "/return",
     },
   ],
   admin_buf: [
     {
       title: "Validasi Peminjaman",
       description: "Review dan approve permintaan peminjaman",
+      path: "/loans",
     },
     {
       title: "Kelola Aset",
       description: "Tambah atau update data aset",
+      path: "/assets",
     },
   ],
   kepala_buf: [
     {
       title: "Ekspor Laporan",
       description: "Download laporan peminjaman dan kerusakan",
+      path: "/export",
+    },
+    {
+      title: "Monitor Kerusakan",
+      description: "Analisis data laporan kerusakan",
+      path: "/damage-history",
     },
     {
       title: "Lihat Ringkasan",

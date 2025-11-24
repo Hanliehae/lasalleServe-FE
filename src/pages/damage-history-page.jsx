@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Calendar, Package, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  Edit,
+  Eye,
+  Calendar,
+  Package,
+  TrendingUp,
+} from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,

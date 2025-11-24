@@ -13,13 +13,13 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 
+// sidebar-nav.jsx - Pastikan konfigurasi sudah benar
 const navItems = [
   {
     title: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
     roles: [
-      "civitas",
       "dosen",
       "mahasiswa",
       "staf",
@@ -32,42 +32,25 @@ const navItems = [
     title: "Aset",
     href: "/assets",
     icon: Package,
-    roles: [
-      "civitas",
-      "dosen",
-      "mahasiswa",
-      "staf",
-      "staf_buf",
-      "admin_buf",
-      "kepala_buf",
-    ],
+    roles: ["admin_buf"], // Hanya admin yang bisa kelola aset
   },
   {
     title: "Peminjaman",
     href: "/loans",
     icon: ClipboardList,
-    roles: [
-      "civitas",
-      "dosen",
-      "mahasiswa",
-      "staf",
-      "staf_buf",
-      "admin_buf",
-      "kepala_buf",
-    ],
+    roles: ["dosen", "mahasiswa", "staf", "staf_buf", "admin_buf"],
   },
   {
     title: "Pengembalian",
     href: "/return",
-    icon: CheckCircle, // Anda perlu import CheckCircle dari lucide-react
-    roles: ["mahasiswa", "dosen", "staf", "staf_buf", "admin_buf"], // Hanya admin dan staf biro
+    icon: CheckCircle,
+    roles: ["mahasiswa", "dosen", "staf", "staf_buf", "admin_buf"],
   },
   {
     title: "Laporan Kerusakan",
     href: "/reports",
     icon: AlertTriangle,
     roles: [
-      "civitas",
       "dosen",
       "mahasiswa",
       "staf",
@@ -86,10 +69,17 @@ const navItems = [
     title: "Riwayat Peminjaman",
     href: "/history",
     icon: History,
-    roles: ["civitas", "dosen", "mahasiswa", "staf", "staf_buf", "admin_buf"],
+    roles: [
+      "dosen",
+      "mahasiswa",
+      "staf",
+      "staf_buf",
+      "admin_buf",
+      "kepala_buf",
+    ],
   },
   {
-    title: "Laporan Ekspor",
+    title: "Laporan & Ekspor",
     href: "/export",
     icon: FileText,
     roles: ["kepala_buf", "admin_buf"],
