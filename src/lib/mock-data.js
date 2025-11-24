@@ -1,30 +1,30 @@
-export const getAcademicYear = (date = new Date()) => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // 1-12
-  // Tahun ajaran: Juli tahun sekarang - Juni tahun berikutnya
-  return month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
-};
-
-export const getAcademicYearFromDate = (dateString) => {
-  const date = new Date(dateString);
-  return getAcademicYear(date);
-};
-
 export const getAcademicYearOptions = () => {
   const currentYear = new Date().getFullYear();
-  const options = [];
+  return [
+    `${currentYear - 1}/${currentYear}`,
+    `${currentYear}/${currentYear + 1}`,
+    `${currentYear + 1}/${currentYear + 2}`
+  ];
+};
+
+// Fungsi untuk mendapatkan tahun ajaran saat ini
+export const getAcademicYear = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
   
-  for (let i = 2020; i <= currentYear + 1; i++) {
-    options.push(`${i}/${i + 1}`);
+  // Asumsi tahun ajaran Juli-Juni
+  if (month >= 7) {
+    return `${year}/${year + 1}`;
+  } else {
+    return `${year - 1}/${year}`;
   }
-  
-  return options.reverse();
 };
 
 
 export const mockAssets = [
   {
     id: 'a1',
+     acquisitionYear: "2024/2025",
     name: 'Ruang Seminar A',
     category: 'ruangan',
     location: 'Gedung Agustinus',
@@ -35,6 +35,7 @@ export const mockAssets = [
   },
   {
     id: 'a2',
+     acquisitionYear: "2024/2025",
     name: 'Ruang Meeting B',
     category: 'ruangan',
     location: 'Gedung Josephus',
@@ -45,6 +46,7 @@ export const mockAssets = [
   },
   {
     id: 'a7',
+     acquisitionYear: "2024/2025",
     name: 'Ruang Kuliah C1',
     category: 'ruangan',
     location: 'Gedung Katarina',
@@ -55,6 +57,7 @@ export const mockAssets = [
   },
   {
     id: 'a8',
+     acquisitionYear: "2024/2025",
     name: 'Lab Komputer',
     category: 'ruangan',
     location: 'Gedung Katarina',
@@ -65,6 +68,7 @@ export const mockAssets = [
   },
   {
     id: 'a3',
+     acquisitionYear: "2024/2025",
     name: 'Proyektor LCD',
     category: 'fasilitas',
     location: 'Gedung Agustinus',
@@ -75,6 +79,7 @@ export const mockAssets = [
   },
   {
     id: 'a4',
+     acquisitionYear: "2024/2025",
     name: 'Kursi Lipat',
     category: 'fasilitas',
     location: 'Gedung Josephus',
@@ -130,6 +135,7 @@ export const mockLoans = [
     id: 'l1',
     borrowerId: '4',
     borrowerName: 'Mahasiswa Test',
+     academicYear: "2024/2025",
     facilities: [{ id: 'a3', name: 'Proyektor LCD', quantity: 2 }],
     startDate: '2025-10-15',
     startTime: '08:00',
@@ -145,6 +151,7 @@ export const mockLoans = [
     id: 'l2',
     borrowerId: '5',
     borrowerName: 'Dosen Test',
+     academicYear: "2024/2025",
     roomId: 'a1',
     roomName: 'Ruang Seminar A',
     facilities: [],
@@ -160,6 +167,7 @@ export const mockLoans = [
     id: 'l3',
     borrowerId: '4',
     borrowerName: 'Mahasiswa Test',
+     academicYear: "2024/2025",
     facilities: [{ id: 'a4', name: 'Kursi Lipat', quantity: 50 }],
     startDate: '2025-10-14',
     endDate: '2025-10-14',
@@ -173,6 +181,7 @@ export const mockLoans = [
     id: 'l4',
     borrowerId: '5',
     borrowerName: 'Dosen Test',
+     academicYear: "2024/2025",
     roomId: 'a1',
     roomName: 'Ruang Seminar A',
     facilities: [{ id: 'a5', name: 'Sound System', quantity: 1 }],
@@ -193,6 +202,7 @@ export const mockDamageReports = [
     assetName: 'Proyektor LCD',
     reportedBy: '4',
     reporterName: 'Mahasiswa Test',
+     academicYear: "2024/2025",
     loanId: 'l4',
     description: 'Lampu proyektor redup, kemungkinan perlu diganti',
     photoUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80',

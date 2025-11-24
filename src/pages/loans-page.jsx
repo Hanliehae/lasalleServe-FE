@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../context/auth-context.jsx";
-import { mockAssets, mockLoans } from "../lib/mock-data.js";
+import { mockAssets, mockLoans, getAcademicYear } from "../lib/mock-data.js"; // TAMBAHKAN IMPORT getAcademicYear
 
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -111,6 +111,7 @@ export function LoansPage() {
         endDate: payload.endDate ?? "",
         status: "menunggu",
         purpose: payload.purpose ?? "",
+        academicYear: payload.academicYear || getAcademicYear(), // TAMBAHKAN academicYear
         createdAt: timestamp,
         updatedAt: timestamp,
       },
@@ -143,8 +144,6 @@ export function LoansPage() {
           </p>
         </div>
 
-        {/* PINJAM RUANGAN */}
-
         {canCreateLoan && (
           <div className="flex flex-wrap gap-2">
             <Dialog open={isRoomFormOpen} onOpenChange={setIsRoomFormOpen}>
@@ -154,8 +153,7 @@ export function LoansPage() {
                   Pinjam Ruangan
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl bg-card">
-                {/* <div className="max-h-[80vh] overflow-y-auto p-6"> */}
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Ruangan</DialogTitle>
                   <DialogDescription>
@@ -163,7 +161,6 @@ export function LoansPage() {
                     beserta fasilitas pendukungnya.
                   </DialogDescription>
                 </DialogHeader>
-
                 <RoomLoanForm
                   onSubmit={(payload) => {
                     handleCreateLoan(payload);
@@ -171,7 +168,6 @@ export function LoansPage() {
                   }}
                   onCancel={() => setIsRoomFormOpen(false)}
                 />
-                {/* </div> */}
               </DialogContent>
             </Dialog>
 
@@ -185,15 +181,13 @@ export function LoansPage() {
                   Pinjam Fasilitas
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl bg-card">
-                {/* <div className="max-h-[80vh] overflow-y-auto p-6"> */}
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Ajukan Peminjaman Fasilitas</DialogTitle>
                   <DialogDescription>
                     Ajukan peminjaman fasilitas untuk menunjang kegiatan Anda.
                   </DialogDescription>
                 </DialogHeader>
-
                 <FacilityLoanForm
                   onSubmit={(payload) => {
                     handleCreateLoan(payload);
@@ -201,7 +195,6 @@ export function LoansPage() {
                   }}
                   onCancel={() => setIsFacilityFormOpen(false)}
                 />
-                {/* </div> */}
               </DialogContent>
             </Dialog>
           </div>
@@ -265,12 +258,6 @@ export function LoansPage() {
                     {canApprove && <TableCell>{loan.borrowerName}</TableCell>}
                     <TableCell>
                       <LoanAssetDetails loan={loan} />
-                    </TableCell>
-                    <TableCell>
-                      <LoanDate value={loan.startDate} />
-                    </TableCell>
-                    <TableCell>
-                      <LoanDate value={loan.endDate} />
                     </TableCell>
                     <TableCell>
                       <LoanDate value={loan.startDate} time={loan.startTime} />
@@ -351,7 +338,23 @@ function LoanDate({ value, time }) {
   );
 }
 
-//form ajukan pinjam ruangan
+// Fallback function jika getAcademicYear tidak tersedia
+const fallbackGetAcademicYear = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+
+  if (month >= 7) {
+    return `${year}/${year + 1}`;
+  } else {
+    return `${year - 1}/${year}`;
+  }
+};
+
+// Gunakan fungsi yang tersedia atau fallback
+const academicYearFunction = getAcademicYear || fallbackGetAcademicYear;
+
+// Form ajukan pinjam ruangan
 function RoomLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     location: "",
@@ -363,6 +366,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
     endTime: "17:00",
     purpose: "",
     facilities: [],
+    academicYear: academicYearFunction(),
   });
   const [facilitySearch, setFacilitySearch] = useState("");
 
@@ -628,29 +632,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
   );
 }
 
-// FORM AJUKAN PINJAM FASILITAS
-
-{
-  /* <DialogContent className="sm:max-w-2xl max-h-[90vh]">
-  <div className="overflow-y-auto max-h-[75vh] pr-2">
-    <DialogHeader>
-      <DialogTitle>Ajukan Peminjaman Fasilitas</DialogTitle>
-      <DialogDescription>
-        Ajukan peminjaman fasilitas untuk menunjang kegiatan Anda.
-      </DialogDescription>
-    </DialogHeader>
-
-    <FacilityLoanForm
-      onSubmit={(payload) => {
-        handleCreateLoan(payload);
-        setIsFacilityFormOpen(false);
-      }}
-      onCancel={() => setIsFacilityFormOpen(false)}
-    />
-  </div>
-</DialogContent>; */
-}
-
+// Form ajukan pinjam fasilitas
 function FacilityLoanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     startDate: "",
@@ -659,6 +641,7 @@ function FacilityLoanForm({ onSubmit, onCancel }) {
     endTime: "17:00",
     purpose: "",
     facilities: [],
+    academicYear: academicYearFunction(),
   });
 
   const [facilitySearch, setFacilitySearch] = useState("");
@@ -784,6 +767,12 @@ function FacilityLoanForm({ onSubmit, onCancel }) {
         />
 
         <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2">
+          {availableFacilities.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Fasilitas tidak ditemukan.
+            </p>
+          )}
+
           {availableFacilities.map((f) => (
             <div
               key={f.id}
@@ -829,7 +818,7 @@ function FacilityLoanForm({ onSubmit, onCancel }) {
                   size="sm"
                   onClick={() => removeFacility(f.id)}
                 >
-                  ❌
+                  <Trash2 className="size-4 text-red-500" />
                 </Button>
               </div>
             ))}

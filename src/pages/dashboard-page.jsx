@@ -62,7 +62,7 @@ const ROLE_STAT_KEYS = {
   kepala_buf: ["totalAssets", "totalLoans", "totalReports", "lowStockAssets"],
   admin_buf: ["totalAssets", "pendingLoans", "activeLoans", "pendingReports"],
   staf_buf: ["pendingLoans", "pendingReports", "activeLoans", "overdueLoans"],
-  default: ["activeLoans", "pendingLoans", "totalAssets", "totalReports"],
+  default: ["activeLoans", "pendingLoans", "totalReports"],
 };
 
 const QUICK_ACTIONS = {

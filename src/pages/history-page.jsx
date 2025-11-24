@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Search, Calendar, Clock } from "lucide-react";
+import { Search, Calendar, Clock, CheckCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -29,7 +29,12 @@ export function HistoryPage() {
 
   const canViewAll = user?.role === "admin_buf" || user?.role === "staf_buf";
 
+  // FILTER: Hanya ambil peminjaman dengan status 'selesai'
   const history = mockLoans.filter((loan) => {
+    // Hanya tampilkan yang statusnya selesai
+    if (loan.status !== "selesai") return false;
+
+    // Filter berdasarkan akses user
     if (canViewAll) return true;
     return loan.borrowerId === user?.id;
   });
@@ -47,10 +52,13 @@ export function HistoryPage() {
             f.name.toLowerCase().includes(searchTerm)
           ));
 
-      const loanDate = new Date(loan.createdAt);
+      // Gunakan tanggal pengembalian jika ada, jika tidak gunakan tanggal selesai
+      const returnDate = loan.returnedAt
+        ? new Date(loan.returnedAt)
+        : new Date(loan.endDate);
       const now = new Date();
       const daysDiff = Math.floor(
-        (now.getTime() - loanDate.getTime()) / (1000 * 60 * 60 * 24)
+        (now.getTime() - returnDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       let matchesTime = true;
@@ -91,9 +99,56 @@ export function HistoryPage() {
         <h1>Riwayat Peminjaman</h1>
         <p className="text-muted-foreground mt-2">
           {canViewAll
-            ? "Lihat riwayat semua peminjaman"
-            : "Lihat riwayat peminjaman Anda"}
+            ? "Lihat riwayat semua peminjaman yang sudah selesai"
+            : "Lihat riwayat peminjaman Anda yang sudah selesai"}
         </p>
+      </div>
+
+      {/* Statistik Ringkas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Peminjaman Selesai
+                </p>
+                <p className="text-2xl font-bold">{history.length}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Ditampilkan
+                </p>
+                <p className="text-2xl font-bold">{filteredHistory.length}</p>
+              </div>
+              <Search className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Tahun Ajaran
+                </p>
+                <p className="text-lg font-bold">
+                  {academicYearFilter === "all" ? "Semua" : academicYearFilter}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -147,20 +202,28 @@ export function HistoryPage() {
                 <TableRow>
                   {canViewAll && <TableHead>Peminjam</TableHead>}
                   <TableHead>Aset</TableHead>
-                  <TableHead>Tanggal & Waktu</TableHead>
+                  <TableHead>Tanggal Peminjaman</TableHead>
+                  <TableHead>Tanggal Pengembalian</TableHead>
                   <TableHead>Tahun Ajaran</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Keperluan</TableHead>
+                  {/* <TableHead>Keperluan</TableHead> */}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistory.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={canViewAll ? 6 : 5}
-                      className="text-center text-muted-foreground"
+                      colSpan={canViewAll ? 7 : 6}
+                      className="text-center text-muted-foreground py-8"
                     >
-                      Tidak ada riwayat ditemukan
+                      <div className="flex flex-col items-center justify-center">
+                        <CheckCircle className="h-12 w-12 text-muted-foreground mb-2" />
+                        <p>Tidak ada riwayat peminjaman selesai ditemukan</p>
+                        <p className="text-sm">
+                          Semua peminjaman yang sudah dikembalikan akan muncul
+                          di sini
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -205,11 +268,48 @@ export function HistoryPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{loan.academicYear || "2025/2026"}</TableCell>
-                      <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                      <TableCell className="max-w-xs">
-                        <p className="truncate">{loan.purpose || "-"}</p>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="size-3 text-green-500" />
+                            <span>
+                              {loan.returnedAt
+                                ? new Date(loan.returnedAt).toLocaleDateString(
+                                    "id-ID"
+                                  )
+                                : new Date(loan.endDate).toLocaleDateString(
+                                    "id-ID"
+                                  )}
+                            </span>
+                          </div>
+                          {loan.returnedAt && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="size-3" />
+                              <span>
+                                {new Date(loan.returnedAt).toLocaleTimeString(
+                                  "id-ID",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
+                      <TableCell>{loan.academicYear || "2025/2026"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(loan.status)}
+                          {/* {loan.returnedAt && (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )} */}
+                        </div>
+                      </TableCell>
+                      {/* <TableCell className="max-w-xs">
+                        <p className="truncate">{loan.purpose || "-"}</p>
+                      </TableCell> */}
                     </TableRow>
                   ))
                 )}
