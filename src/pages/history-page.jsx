@@ -1,6 +1,11 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../context/auth-context.jsx";
-import { mockLoans, getAcademicYearOptions } from "../lib/mock-data.js";
+import {
+  mockLoans,
+  getAcademicYearOptions,
+  getSemesterOptions,
+  getSemesterFromDate,
+} from "../lib/mock-data.js";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
@@ -26,6 +31,7 @@ export function HistoryPage() {
   const [search, setSearch] = useState("");
   const [timeFilter, setTimeFilter] = useState("all");
   const [academicYearFilter, setAcademicYearFilter] = useState("all");
+  const [semesterFilter, setSemesterFilter] = useState("all");
 
   const canViewAll = user?.role === "admin_buf" || user?.role === "staf_buf";
 
@@ -40,6 +46,7 @@ export function HistoryPage() {
   });
 
   const academicYearOptions = getAcademicYearOptions();
+  const semesterOptions = getSemesterOptions();
 
   const filteredHistory = useMemo(() => {
     return history.filter((loan) => {
@@ -71,9 +78,20 @@ export function HistoryPage() {
         matchesAcademicYear = loan.academicYear === academicYearFilter;
       }
 
-      return matchesSearch && matchesTime && matchesAcademicYear;
+      // TAMBAHKAN FILTER SEMESTER
+      let matchesSemester = true;
+      if (semesterFilter !== "all") {
+        const loanSemester =
+          loan.semester ||
+          getSemesterFromDate(loan.createdAt || loan.startDate);
+        matchesSemester = loanSemester === semesterFilter;
+      }
+
+      return (
+        matchesSearch && matchesTime && matchesAcademicYear && matchesSemester
+      );
     });
-  }, [history, search, timeFilter, academicYearFilter]);
+  }, [history, search, timeFilter, academicYearFilter, semesterFilter]);
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -104,8 +122,8 @@ export function HistoryPage() {
         </p>
       </div>
 
-      {/* Statistik Ringkas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Statistik Ringkas - Tambahkan Info Semester */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -146,6 +164,26 @@ export function HistoryPage() {
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* TAMBAHKAN CARD SEMESTER */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Semester
+                </p>
+                <p className="text-lg font-bold">
+                  {semesterFilter === "all"
+                    ? "Semua"
+                    : semesterOptions.find((s) => s.value === semesterFilter)
+                        ?.label}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
@@ -192,6 +230,21 @@ export function HistoryPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* TAMBAHKAN DROPDOWN SEMESTER */}
+              <Select value={semesterFilter} onValueChange={setSemesterFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Semester</SelectItem>
+                  {semesterOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -205,8 +258,8 @@ export function HistoryPage() {
                   <TableHead>Tanggal Peminjaman</TableHead>
                   <TableHead>Tanggal Pengembalian</TableHead>
                   <TableHead>Tahun Ajaran</TableHead>
+                  <TableHead>Semester</TableHead>
                   <TableHead>Status</TableHead>
-                  {/* <TableHead>Keperluan</TableHead> */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -300,16 +353,15 @@ export function HistoryPage() {
                       </TableCell>
                       <TableCell>{loan.academicYear || "2025/2026"}</TableCell>
                       <TableCell>
+                        <span className="capitalize">
+                          {loan.semester || getSemesterFromDate(loan.startDate)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           {getStatusBadge(loan.status)}
-                          {/* {loan.returnedAt && (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          )} */}
                         </div>
                       </TableCell>
-                      {/* <TableCell className="max-w-xs">
-                        <p className="truncate">{loan.purpose || "-"}</p>
-                      </TableCell> */}
                     </TableRow>
                   ))
                 )}

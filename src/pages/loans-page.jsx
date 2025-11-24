@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+
+import { getSemesterFromDate } from "../lib/mock-data.js";
+
 import {
   Calendar,
   CheckCircle,
@@ -112,6 +115,9 @@ export function LoansPage() {
         status: "menunggu",
         purpose: payload.purpose ?? "",
         academicYear: payload.academicYear || getAcademicYear(), // TAMBAHKAN academicYear
+        semester:
+          payload.semester ||
+          getSemesterFromDate(payload.startDate || new Date()), // TAMBAHKAN SEMESTER
         createdAt: timestamp,
         updatedAt: timestamp,
       },
@@ -367,6 +373,7 @@ function RoomLoanForm({ onSubmit, onCancel }) {
     purpose: "",
     facilities: [],
     academicYear: academicYearFunction(),
+    semester: getSemesterFromDate(new Date()),
   });
   const [facilitySearch, setFacilitySearch] = useState("");
 
@@ -642,6 +649,7 @@ function FacilityLoanForm({ onSubmit, onCancel }) {
     purpose: "",
     facilities: [],
     academicYear: academicYearFunction(),
+    semester: getSemesterFromDate(new Date()),
   });
 
   const [facilitySearch, setFacilitySearch] = useState("");

@@ -5,6 +5,8 @@ import {
   mockAssets,
   getAcademicYearOptions,
   getAcademicYear,
+  getSemesterOptions,
+  getSemesterFromDate,
 } from "../lib/mock-data.js";
 import { Button } from "../components/ui/button";
 import { useState } from "react";
@@ -22,19 +24,7 @@ import {
   AlertTriangle,
   ClipboardList,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+
 import {
   Select,
   SelectContent,
@@ -50,12 +40,14 @@ const academicYearOptions = getAcademicYearOptions?.() || [
   "2024/2025",
   "2025/2026",
 ];
+const semesterOptions = getSemesterOptions();
 
 export function ExportPage() {
   const { user } = useAuth();
   const [selectedAcademicYear, setSelectedAcademicYear] = useState(
     getAcademicYear?.() || "2024/2025"
   );
+  const [selectedSemester, setSelectedSemester] = useState("all");
   const [reportType, setReportType] = useState("peminjaman");
 
   const canExport = user?.role === "kepala_buf" || user?.role === "admin_buf";
@@ -74,41 +66,6 @@ export function ExportPage() {
     );
   }
 
-  // Data untuk berbagai jenis laporan
-  const getReportData = () => {
-    const year = selectedAcademicYear;
-
-    switch (reportType) {
-      case "peminjaman":
-        return mockLoans.filter(
-          (loan) =>
-            loan.academicYear === year ||
-            (loan.createdAt && getAcademicYearFromDate(loan.createdAt) === year)
-        );
-      case "pengembalian":
-        return mockLoans.filter(
-          (loan) =>
-            loan.status === "selesai" &&
-            (loan.academicYear === year ||
-              (loan.returnedAt &&
-                getAcademicYearFromDate(loan.returnedAt) === year))
-        );
-      case "kerusakan":
-        return mockDamageReports.filter(
-          (report) =>
-            report.academicYear === year ||
-            (report.createdAt &&
-              getAcademicYearFromDate(report.createdAt) === year)
-        );
-      case "aset_masuk":
-        return generateAssetInData(year);
-      case "aset_keluar":
-        return generateAssetOutData(year);
-      default:
-        return [];
-    }
-  };
-
   // Fungsi bantu untuk mendapatkan tahun ajaran dari tanggal
   const getAcademicYearFromDate = (dateString) => {
     const date = new Date(dateString);
@@ -121,6 +78,81 @@ export function ExportPage() {
     } else {
       return `${year - 1}/${year}`;
     }
+  };
+
+  // Data untuk berbagai jenis laporan dengan filter semester
+  const getReportData = () => {
+    const year = selectedAcademicYear;
+    const semester = selectedSemester;
+
+    let data = [];
+
+    switch (reportType) {
+      case "peminjaman":
+        data = mockLoans.filter((loan) => {
+          const yearMatch =
+            loan.academicYear === year ||
+            (loan.createdAt &&
+              getAcademicYearFromDate(loan.createdAt) === year);
+          const semesterMatch =
+            semester === "all" ||
+            loan.semester === semester ||
+            (loan.createdAt &&
+              getSemesterFromDate(loan.createdAt) === semester);
+          return yearMatch && semesterMatch;
+        });
+        break;
+      case "pengembalian":
+        data = mockLoans.filter((loan) => {
+          const yearMatch =
+            loan.status === "selesai" &&
+            (loan.academicYear === year ||
+              (loan.returnedAt &&
+                getAcademicYearFromDate(loan.returnedAt) === year));
+          const semesterMatch =
+            semester === "all" ||
+            loan.semester === semester ||
+            (loan.returnedAt &&
+              getSemesterFromDate(loan.returnedAt) === semester);
+          return yearMatch && semesterMatch;
+        });
+        break;
+      case "kerusakan":
+        data = mockDamageReports.filter((report) => {
+          const yearMatch =
+            report.academicYear === year ||
+            (report.createdAt &&
+              getAcademicYearFromDate(report.createdAt) === year);
+          const semesterMatch =
+            semester === "all" ||
+            report.semester === semester ||
+            (report.createdAt &&
+              getSemesterFromDate(report.createdAt) === semester);
+          return yearMatch && semesterMatch;
+        });
+        break;
+      case "aset_masuk":
+        data = generateAssetInData(year).filter((asset) => {
+          if (semester === "all") return true;
+          // Aset masuk biasanya di semester ganjil (awal tahun ajaran)
+          return semester === "ganjil";
+        });
+        break;
+      case "aset_keluar":
+        data = generateAssetOutData(year).filter((asset) => {
+          if (semester === "all") return true;
+          // Gunakan tanggal selesai untuk menentukan semester
+          if (asset.tanggal_selesai) {
+            return getSemesterFromDate(asset.tanggal_selesai) === semester;
+          }
+          return true;
+        });
+        break;
+      default:
+        data = [];
+    }
+
+    return data;
   };
 
   // Generate data aset masuk (mock)
@@ -192,10 +224,6 @@ export function ExportPage() {
       exportToCSV(data, type, academicYear);
     } else if (format === "pdf") {
       exportToPDF(data, type, academicYear);
-    } else {
-      alert(
-        `Mengekspor laporan ${type} tahun ${academicYear} dalam format ${format.toUpperCase()}...`
-      );
     }
   };
 
@@ -233,7 +261,6 @@ export function ExportPage() {
 
   // Fungsi ekspor ke PDF (simulasi)
   const exportToPDF = (data, type, academicYear) => {
-    // Simulasi ekspor PDF - dalam implementasi nyata, gunakan library seperti jsPDF
     const printWindow = window.open("", "_blank");
     const content = `
       <html>
@@ -250,7 +277,11 @@ export function ExportPage() {
         <body>
           <div class="header">
             <h1>Laporan ${getReportTypeLabel(type)}</h1>
-            <h2>Tahun Ajaran: ${academicYear}</h2>
+            <h2>Tahun Ajaran: ${academicYear} - Semester: ${
+      selectedSemester === "all"
+        ? "Semua Semester"
+        : semesterOptions.find((s) => s.value === selectedSemester)?.label
+    }</h2>
             <p>Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}</p>
           </div>
           <table>
@@ -295,43 +326,7 @@ export function ExportPage() {
     return labels[type] || type;
   };
 
-  // Data untuk grafik (sisa kode yang sudah ada)
-  const loansByMonth = [
-    { bulan: "Jan", total: 12 },
-    { bulan: "Feb", total: 19 },
-    { bulan: "Mar", total: 15 },
-    { bulan: "Apr", total: 22 },
-    { bulan: "Mei", total: 18 },
-    { bulan: "Jun", total: 25 },
-  ];
-
-  const assetsByCategory = [
-    {
-      name: "Ruangan",
-      value: mockAssets.filter((a) => a.category === "ruangan").length,
-    },
-    {
-      name: "Fasilitas",
-      value: mockAssets.filter((a) => a.category === "fasilitas").length,
-    },
-  ];
-
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
-
-  const assetMovementData = [
-    { bulan: "Jul", masuk: 5, keluar: 3 },
-    { bulan: "Agu", masuk: 8, keluar: 6 },
-    { bulan: "Sep", masuk: 12, keluar: 10 },
-    { bulan: "Okt", masuk: 7, keluar: 8 },
-    { bulan: "Nov", masuk: 9, keluar: 7 },
-    { bulan: "Des", masuk: 6, keluar: 9 },
-    { bulan: "Jan", masuk: 10, keluar: 8 },
-    { bulan: "Feb", masuk: 8, keluar: 6 },
-    { bulan: "Mar", masuk: 11, keluar: 9 },
-    { bulan: "Apr", masuk: 7, keluar: 10 },
-    { bulan: "Mei", masuk: 9, keluar: 7 },
-    { bulan: "Jun", masuk: 6, keluar: 5 },
-  ];
+  const reportData = getReportData();
 
   return (
     <div className="space-y-6">
@@ -397,12 +392,12 @@ export function ExportPage() {
         </Card>
       </div>
 
-      {/* Filter Laporan */}
+      {/* Filter Laporan dengan Semester */}
       <Card>
         <CardHeader>
           <CardTitle>Filter Laporan</CardTitle>
           <CardDescription>
-            Pilih tahun ajaran dan jenis laporan untuk diekspor
+            Pilih tahun ajaran, semester, dan jenis laporan untuk diekspor
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -425,6 +420,26 @@ export function ExportPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="semester">Semester</Label>
+              <Select
+                value={selectedSemester}
+                onValueChange={setSelectedSemester}
+              >
+                <SelectTrigger className="w-[200px]" id="semester">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {semesterOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="report-type">Jenis Laporan</Label>
               <Select value={reportType} onValueChange={setReportType}>
@@ -446,33 +461,39 @@ export function ExportPage() {
         </CardContent>
       </Card>
 
-      {/* Preview Data */}
+      {/* Preview Data dengan Info Semester */}
       <Card>
         <CardHeader>
-          <CardTitle>Preview Data</CardTitle>
+          <CardTitle>Pratinjau Data</CardTitle>
           <CardDescription>
-            Tahun Ajaran: {selectedAcademicYear} - Jenis:{" "}
-            {getReportTypeLabel(reportType)}
-            {` (${getReportData().length} records)`}
+            {selectedAcademicYear} - Semester:{" "}
+            {selectedSemester === "all"
+              ? "Semua Semester"
+              : semesterOptions.find((s) => s.value === selectedSemester)
+                  ?.label}{" "}
+            - Jenis: {getReportTypeLabel(reportType)}
+            {` (${reportData.length} data ditemukan)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  {getReportData().length > 0 &&
-                    Object.keys(getReportData()[0]).map((key) => (
+          {reportData.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Tidak ada data untuk laporan ini
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    {Object.keys(reportData[0]).map((key) => (
                       <th key={key} className="text-left p-2 font-medium">
                         {key}
                       </th>
                     ))}
-                </tr>
-              </thead>
-              <tbody>
-                {getReportData()
-                  .slice(0, 5)
-                  .map((row, index) => (
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.slice(0, 5).map((row, index) => (
                     <tr key={index} className="border-b">
                       {Object.values(row).map((value, cellIndex) => (
                         <td key={cellIndex} className="p-2">
@@ -481,14 +502,15 @@ export function ExportPage() {
                       ))}
                     </tr>
                   ))}
-              </tbody>
-            </table>
-            {getReportData().length > 5 && (
-              <p className="text-muted-foreground text-sm mt-2">
-                Menampilkan 5 dari {getReportData().length} records
-              </p>
-            )}
-          </div>
+                </tbody>
+              </table>
+              {reportData.length > 5 && (
+                <p className="text-muted-foreground text-sm mt-2">
+                  Menampilkan 5 dari {reportData.length} records
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -504,14 +526,14 @@ export function ExportPage() {
           <div className="flex gap-2">
             <Button
               onClick={() => handleExport("csv")}
-              disabled={getReportData().length === 0}
+              disabled={reportData.length === 0}
             >
               <Download className="mr-2" />
               Export CSV
             </Button>
             <Button
               onClick={() => handleExport("pdf")}
-              disabled={getReportData().length === 0}
+              disabled={reportData.length === 0}
             >
               <FileText className="mr-2" />
               Export PDF

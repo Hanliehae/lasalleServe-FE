@@ -20,11 +20,38 @@ export const getAcademicYear = (date = new Date()) => {
   }
 };
 
+// Fungsi untuk mendapatkan opsi semester
+export const getSemesterOptions = () => [
+  { value: 'all', label: 'Semua Semester' },
+  { value: 'ganjil', label: 'Ganjil' },
+  { value: 'genap', label: 'Genap' },
+];
+
+// Fungsi untuk mendapatkan semester dari tanggal
+export const getSemesterFromDate = (dateString) => {
+  const date = new Date(dateString);
+  const month = date.getMonth() + 1; // Januari = 1, Desember = 12
+  
+  // Semester Ganjil: Agustus - Januari (8-1)
+  // Semester Genap: Februari - Juli (2-7)
+  if (month >= 8 || month <= 1) {
+    return 'ganjil';
+  } else {
+    return 'genap';
+  }
+};
+
+// Fungsi untuk mendapatkan semester dan tahun ajaran lengkap
+export const getAcademicYearAndSemester = (date = new Date()) => {
+  const academicYear = getAcademicYear(date);
+  const semester = getSemesterFromDate(date);
+  return { academicYear, semester };
+};
 
 export const mockAssets = [
   {
     id: 'a1',
-     acquisitionYear: "2024/2025",
+    acquisitionYear: "2024/2025",
     name: 'Ruang Seminar A',
     category: 'ruangan',
     location: 'Gedung Agustinus',
@@ -35,7 +62,7 @@ export const mockAssets = [
   },
   {
     id: 'a2',
-     acquisitionYear: "2024/2025",
+    acquisitionYear: "2024/2025",
     name: 'Ruang Meeting B',
     category: 'ruangan',
     location: 'Gedung Josephus',
@@ -46,7 +73,7 @@ export const mockAssets = [
   },
   {
     id: 'a7',
-     acquisitionYear: "2024/2025",
+    acquisitionYear: "2024/2025",
     name: 'Ruang Kuliah C1',
     category: 'ruangan',
     location: 'Gedung Katarina',
@@ -57,7 +84,7 @@ export const mockAssets = [
   },
   {
     id: 'a8',
-     acquisitionYear: "2024/2025",
+    acquisitionYear: "2024/2025",
     name: 'Lab Komputer',
     category: 'ruangan',
     location: 'Gedung Katarina',
@@ -68,7 +95,7 @@ export const mockAssets = [
   },
   {
     id: 'a3',
-     acquisitionYear: "2024/2025",
+    acquisitionYear: "2024/2025",
     name: 'Proyektor LCD',
     category: 'fasilitas',
     location: 'Gedung Agustinus',
@@ -79,7 +106,7 @@ export const mockAssets = [
   },
   {
     id: 'a4',
-     acquisitionYear: "2024/2025",
+    acquisitionYear: "2024/2025",
     name: 'Kursi Lipat',
     category: 'fasilitas',
     location: 'Gedung Josephus',
@@ -135,7 +162,8 @@ export const mockLoans = [
     id: 'l1',
     borrowerId: '4',
     borrowerName: 'Mahasiswa Test',
-     academicYear: "2024/2025",
+    academicYear: "2024/2025",
+    semester: "ganjil",
     facilities: [{ id: 'a3', name: 'Proyektor LCD', quantity: 2 }],
     startDate: '2025-10-15',
     startTime: '08:00',
@@ -143,7 +171,6 @@ export const mockLoans = [
     endTime: '17:00',
     status: 'menunggu',
     purpose: 'Untuk seminar proposal skripsi',
-    academicYear: '2025/2026',
     createdAt: '2025-10-13T10:00:00Z',
     updatedAt: '2025-10-13T10:00:00Z',
   },
@@ -151,7 +178,8 @@ export const mockLoans = [
     id: 'l2',
     borrowerId: '5',
     borrowerName: 'Dosen Test',
-     academicYear: "2024/2025",
+    academicYear: "2024/2025",
+    semester: "ganjil",
     roomId: 'a1',
     roomName: 'Ruang Seminar A',
     facilities: [],
@@ -167,7 +195,8 @@ export const mockLoans = [
     id: 'l3',
     borrowerId: '4',
     borrowerName: 'Mahasiswa Test',
-     academicYear: "2024/2025",
+    academicYear: "2024/2025",
+    semester: "ganjil",
     facilities: [{ id: 'a4', name: 'Kursi Lipat', quantity: 50 }],
     startDate: '2025-10-14',
     endDate: '2025-10-14',
@@ -175,13 +204,14 @@ export const mockLoans = [
     purpose: 'Acara organisasi mahasiswa',
     createdAt: '2025-10-12T09:00:00Z',
     updatedAt: '2025-10-14T17:00:00Z',
-     returnedAt: '2025-10-14T17:00:00Z', 
+    returnedAt: '2025-10-14T17:00:00Z', 
   },
   {
     id: 'l4',
     borrowerId: '5',
     borrowerName: 'Dosen Test',
-     academicYear: "2024/2025",
+    academicYear: "2024/2025",
+    semester: "ganjil",
     roomId: 'a1',
     roomName: 'Ruang Seminar A',
     facilities: [{ id: 'a5', name: 'Sound System', quantity: 1 }],
@@ -202,7 +232,8 @@ export const mockDamageReports = [
     assetName: 'Proyektor LCD',
     reportedBy: '4',
     reporterName: 'Mahasiswa Test',
-     academicYear: "2024/2025",
+    academicYear: "2024/2025",
+    semester: "ganjil",
     loanId: 'l4',
     description: 'Lampu proyektor redup, kemungkinan perlu diganti',
     photoUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&q=80',
@@ -217,6 +248,8 @@ export const mockDamageReports = [
     assetName: 'Laptop Dell',
     reportedBy: '2',
     reporterName: 'Staf BUF',
+    academicYear: "2024/2025",
+    semester: "ganjil",
     description: 'Keyboard rusak beberapa tombol tidak berfungsi',
     photoUrl: 'https://images.unsplash.com/photo-1593642532400-2682810df593?w=800&q=80',
     priority: 'tinggi',
@@ -231,6 +264,8 @@ export const mockDamageReports = [
     assetName: 'Kursi Lipat',
     reportedBy: '1',
     reporterName: 'Admin BUF',
+    academicYear: "2024/2025",
+    semester: "ganjil",
     description: '5 unit kursi engsel patah',
     priority: 'rendah',
     status: 'selesai',
@@ -252,4 +287,3 @@ export const getMockDashboardStats = (role) => {
     overdueLoans: mockLoans.filter(l => l.status === 'overdue').length,
   };
 };
-

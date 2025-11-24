@@ -37,6 +37,8 @@ import {
   mockAssets,
   getAcademicYearOptions,
   getAcademicYear,
+  getSemesterOptions,
+  getSemesterFromDate,
 } from "../lib/mock-data.js";
 
 const PERIOD_OPTIONS = [
@@ -87,6 +89,7 @@ export function DamageHistoryPage() {
   const { user } = useAuth();
   const [timePeriod, setTimePeriod] = useState("30");
   const [academicYearFilter, setAcademicYearFilter] = useState("all");
+  const [semesterFilter, setSemesterFilter] = useState("all");
 
   const filteredReports = useMemo(() => {
     const now = Date.now();
@@ -104,10 +107,20 @@ export function DamageHistoryPage() {
       );
     }
 
+    // TAMBAHKAN FILTER SEMESTER
+    if (semesterFilter !== "all") {
+      reports = reports.filter(
+        (report) =>
+          getSemesterFromDate(report.createdAt) === semesterFilter ||
+          report.semester === semesterFilter
+      );
+    }
+
     return reports;
-  }, [timePeriod, academicYearFilter]);
+  }, [timePeriod, academicYearFilter, semesterFilter]);
 
   const academicYearOptions = getAcademicYearOptions();
+  const semesterOptions = getSemesterOptions();
 
   const priorityStats = useMemo(() => {
     return filteredReports.reduce(
@@ -201,6 +214,9 @@ export function DamageHistoryPage() {
         academicYearFilter={academicYearFilter}
         setAcademicYearFilter={setAcademicYearFilter}
         academicYearOptions={academicYearOptions}
+        semesterFilter={semesterFilter}
+        setSemesterFilter={setSemesterFilter}
+        semesterOptions={semesterOptions}
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -246,13 +262,17 @@ function PeriodSelector({
   academicYearFilter,
   setAcademicYearFilter,
   academicYearOptions,
+  semesterFilter,
+  setSemesterFilter,
+  semesterOptions,
 }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Filter Laporan</CardTitle>
         <CardDescription>
-          Pilih periode dan tahun ajaran untuk melihat statistik kerusakan
+          Pilih periode, tahun ajaran, dan semester untuk melihat statistik
+          kerusakan
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -272,24 +292,43 @@ function PeriodSelector({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="academicYear">Tahun Ajaran</Label>
-          <Select
-            value={academicYearFilter}
-            onValueChange={setAcademicYearFilter}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Tahun Ajaran</SelectItem>
-              {academicYearOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="academicYear">Tahun Ajaran</Label>
+            <Select
+              value={academicYearFilter}
+              onValueChange={setAcademicYearFilter}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Tahun Ajaran</SelectItem>
+                {academicYearOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="semester">Semester</Label>
+            <Select value={semesterFilter} onValueChange={setSemesterFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Semester</SelectItem>
+                {semesterOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardContent>
     </Card>
