@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
-import { Edit, Package, Plus, Search, Trash2 } from 'lucide-react';
+// src/pages/assets-page.jsx
+import { useMemo, useState, useEffect } from "react";
+import { Edit, Package, Plus, Search, Trash2 } from "lucide-react";
 
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -17,16 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+} from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
+} from "../components/ui/select";
 import {
   Table,
   TableBody,
@@ -34,23 +35,48 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table';
-import { Textarea } from '../components/ui/textarea';
-import { useAuth } from '../context/auth-context.jsx';
-import { mockAssets } from '../lib/mock-data.js';
+} from "../components/ui/table";
+import { Textarea } from "../components/ui/textarea";
+import { useAuth } from "../context/auth-context.jsx";
+import { assetService } from "../lib/services/assetService";
+import { toast } from "sonner";
 
-const MANAGER_ROLES = ['admin_buf'];
+const MANAGER_ROLES = ["admin_buf"];
 
 export function AssetsPage() {
   const { user } = useAuth();
 
-  const [assets, setAssets] = useState(mockAssets);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [assets, setAssets] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [editingAsset, setEditingAsset] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const canManageAssets = MANAGER_ROLES.includes(user?.role ?? '');
+  const canManageAssets = MANAGER_ROLES.includes(user?.role ?? "");
+
+  // Fetch assets on component mount
+  useEffect(() => {
+    fetchAssets();
+  }, []);
+
+  const fetchAssets = async () => {
+    try {
+      setLoading(true);
+      const result = await assetService.getAssets(searchTerm, categoryFilter);
+
+      if (result.status === "success") {
+        setAssets(result.data.assets || []);
+      } else {
+        toast.error("Gagal memuat data aset");
+      }
+    } catch (error) {
+      console.error("Error fetching assets:", error);
+      toast.error("Terjadi kesalahan saat memuat data aset");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredAssets = useMemo(() => {
     const keyword = searchTerm.toLowerCase();
@@ -59,47 +85,74 @@ export function AssetsPage() {
         asset.name.toLowerCase().includes(keyword) ||
         asset.location.toLowerCase().includes(keyword);
       const matchesCategory =
-        categoryFilter === 'all' || asset.category === categoryFilter;
+        categoryFilter === "all" || asset.category === categoryFilter;
       return matchesSearch && matchesCategory;
     });
   }, [assets, searchTerm, categoryFilter]);
 
   const handleSearchChange = (event) => setSearchTerm(event.target.value);
-  const handleCategoryChange = (value) => setCategoryFilter(value);
-
-  const handleAddAsset = (payload) => {
-    setAssets((prev) => [
-      ...prev,
-      {
-        id: `a${prev.length + 1}`,
-        name: payload.name ?? '',
-        category: payload.category ?? 'fasilitas',
-        location: payload.location ?? '',
-        totalStock: payload.totalStock ?? 0,
-        availableStock: payload.availableStock ?? 0,
-        condition: payload.condition ?? 'baik',
-        description: payload.description ?? '',
-      },
-    ]);
-    setIsDialogOpen(false);
+  const handleCategoryChange = (value) => {
+    setCategoryFilter(value);
+    fetchAssets(); // Refresh data when category changes
   };
 
-  const handleUpdateAsset = (updates) => {
+  const handleAddAsset = async (payload) => {
+    try {
+      const result = await assetService.createAsset(payload);
+
+      if (result.status === "success") {
+        setAssets((prev) => [...prev, result.data.asset]);
+        toast.success("Aset berhasil ditambahkan");
+        setIsDialogOpen(false);
+      } else {
+        toast.error(result.message || "Gagal menambahkan aset");
+      }
+    } catch (error) {
+      console.error("Error adding asset:", error);
+      toast.error("Terjadi kesalahan saat menambahkan aset");
+    }
+  };
+
+  const handleUpdateAsset = async (updates) => {
     if (!editingAsset) return;
 
-    setAssets((prev) =>
-      prev.map((asset) =>
-        asset.id === editingAsset.id ? { ...asset, ...updates } : asset
-      )
-    );
-    setEditingAsset(null);
-    setIsDialogOpen(false);
+    try {
+      const result = await assetService.updateAsset(editingAsset.id, updates);
+
+      if (result.status === "success") {
+        setAssets((prev) =>
+          prev.map((asset) =>
+            asset.id === editingAsset.id ? { ...asset, ...updates } : asset
+          )
+        );
+        toast.success("Aset berhasil diperbarui");
+        setEditingAsset(null);
+        setIsDialogOpen(false);
+      } else {
+        toast.error(result.message || "Gagal memperbarui aset");
+      }
+    } catch (error) {
+      console.error("Error updating asset:", error);
+      toast.error("Terjadi kesalahan saat memperbarui aset");
+    }
   };
 
-  const handleDeleteAsset = (id) => {
-    if (window.confirm('Yakin ingin menghapus aset ini?')) {
-      setAssets((prev) => prev.filter((asset) => asset.id !== id));
-    };
+  const handleDeleteAsset = async (id) => {
+    if (!window.confirm("Yakin ingin menghapus aset ini?")) return;
+
+    try {
+      const result = await assetService.deleteAsset(id);
+
+      if (result.status === "success") {
+        setAssets((prev) => prev.filter((asset) => asset.id !== id));
+        toast.success("Aset berhasil dihapus");
+      } else {
+        toast.error(result.message || "Gagal menghapus aset");
+      }
+    } catch (error) {
+      console.error("Error deleting asset:", error);
+      toast.error("Terjadi kesalahan saat menghapus aset");
+    }
   };
 
   const openCreateDialog = () => {
@@ -144,7 +197,13 @@ export function AssetsPage() {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="max-w-sm"
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") fetchAssets();
+                }}
               />
+              <Button onClick={fetchAssets} variant="outline">
+                Cari
+              </Button>
             </div>
             <Select value={categoryFilter} onValueChange={handleCategoryChange}>
               <SelectTrigger className="w-[180px]">
@@ -159,12 +218,18 @@ export function AssetsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <AssetsTable
-            assets={filteredAssets}
-            canManage={canManageAssets}
-            onEdit={openEditDialog}
-            onDelete={handleDeleteAsset}
-          />
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <AssetsTable
+              assets={filteredAssets}
+              canManage={canManageAssets}
+              onEdit={openEditDialog}
+              onDelete={handleDeleteAsset}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -172,12 +237,12 @@ export function AssetsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingAsset ? 'Edit Aset' : 'Tambah Aset Baru'}
+              {editingAsset ? "Edit Aset" : "Tambah Aset Baru"}
             </DialogTitle>
             <DialogDescription>
               {editingAsset
-                ? 'Perbarui informasi aset.'
-                : 'Masukkan informasi aset yang akan ditambahkan.'}
+                ? "Perbarui informasi aset."
+                : "Masukkan informasi aset yang akan ditambahkan."}
             </DialogDescription>
           </DialogHeader>
           <AssetForm
@@ -237,7 +302,7 @@ function AssetsTable({ assets, canManage, onEdit, onDelete }) {
                 <TableCell>
                   <span
                     className={
-                      asset.availableStock === 0 ? 'text-red-600' : undefined
+                      asset.availableStock === 0 ? "text-red-600" : undefined
                     }
                   >
                     {asset.availableStock}
@@ -277,24 +342,24 @@ function AssetsTable({ assets, canManage, onEdit, onDelete }) {
 
 function AssetConditionBadge({ value }) {
   const variants = {
-    baik: 'default',
-    rusak_ringan: 'secondary',
-    rusak_berat: 'destructive',
+    baik: "default",
+    rusak_ringan: "secondary",
+    rusak_berat: "destructive",
   };
 
-  return <Badge variant={variants[value]}>{value.replace('_', ' ')}</Badge>;
+  return <Badge variant={variants[value]}>{value.replace("_", " ")}</Badge>;
 }
 
 function AssetForm({ initialData, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(
     initialData ?? {
-      name: '',
-      category: 'fasilitas',
-      location: '',
+      name: "",
+      category: "fasilitas",
+      location: "",
       totalStock: 0,
       availableStock: 0,
-      condition: 'baik',
-      description: '',
+      condition: "baik",
+      description: "",
     }
   );
 

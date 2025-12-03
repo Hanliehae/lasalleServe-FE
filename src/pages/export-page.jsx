@@ -1,15 +1,11 @@
 import { useAuth } from "../context/auth-context.jsx";
-import {
-  mockLoans,
-  mockDamageReports,
-  mockAssets,
-  getAcademicYearOptions,
-  getAcademicYear,
-  getSemesterOptions,
-  getSemesterFromDate,
-} from "../lib/mock-data.js";
+import { exportService } from "../lib/services/exportService";
+import { assetService } from "../lib/services/assetService";
+import { loanService } from "../lib/services/loanService";
+import { reportService } from "../lib/services/reportService";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Button } from "../components/ui/button";
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -34,23 +30,126 @@ import {
 } from "../components/ui/select";
 import { Label } from "../components/ui/label";
 
-// Tambahkan fungsi ini jika tidak ada di mock-data
-const academicYearOptions = getAcademicYearOptions?.() || [
-  "2023/2024",
-  "2024/2025",
-  "2025/2026",
+// Fungsi untuk mendapatkan opsi tahun ajaran
+const getAcademicYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  return [
+    `${currentYear - 2}/${currentYear - 1}`,
+    `${currentYear - 1}/${currentYear}`,
+    `${currentYear}/${currentYear + 1}`,
+    `${currentYear + 1}/${currentYear + 2}`,
+  ];
+};
+
+// Fungsi untuk mendapatkan opsi semester
+const getSemesterOptions = () => [
+  { value: "all", label: "Semua Semester" },
+  { value: "ganjil", label: "Ganjil" },
+  { value: "genap", label: "Genap" },
 ];
-const semesterOptions = getSemesterOptions();
 
 export function ExportPage() {
   const { user } = useAuth();
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState(
-    getAcademicYear?.() || "2024/2025"
-  );
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("all");
   const [reportType, setReportType] = useState("peminjaman");
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    totalAssets: 0,
+    totalLoans: 0,
+    totalReports: 0,
+    activeLoans: 0,
+  });
 
   const canExport = user?.role === "kepala_buf" || user?.role === "admin_buf";
+
+  // Fetch initial stats
+  useEffect(() => {
+    if (canExport) {
+      fetchStats();
+    }
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch asset count
+      const assetsResult = await assetService.getAssets();
+      if (assetsResult.status === "success") {
+        setStats((prev) => ({
+          ...prev,
+          totalAssets: assetsResult.data.assets?.length || 0,
+        }));
+      }
+
+      // Fetch loan count
+      const loansResult = await loanService.getLoans();
+      if (loansResult.status === "success") {
+        const loans = loansResult.data.loans || [];
+        setStats((prev) => ({
+          ...prev,
+          totalLoans: loans.length,
+          activeLoans: loans.filter((l) => l.status === "disetujui").length,
+        }));
+      }
+
+      // Fetch report count
+      const reportsResult = await reportService.getDamageReports();
+      if (reportsResult.status === "success") {
+        setStats((prev) => ({
+          ...prev,
+          totalReports: reportsResult.data.damageReports?.length || 0,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  const handleExport = async (format) => {
+    if (!canExport) {
+      toast.error("Anda tidak memiliki izin untuk mengekspor data");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      if (reportType === "peminjaman" || reportType === "pengembalian") {
+        await exportService.exportLoans(
+          selectedAcademicYear || "",
+          selectedSemester,
+          format
+        );
+        toast.success("Data peminjaman berhasil diekspor");
+      } else if (reportType === "kerusakan") {
+        await exportService.exportDamageReports(
+          selectedAcademicYear || "",
+          selectedSemester,
+          format
+        );
+        toast.success("Data kerusakan berhasil diekspor");
+      } else {
+        toast.error("Jenis laporan belum didukung");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Gagal mengekspor data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getReportTypeLabel = (type) => {
+    const labels = {
+      peminjaman: "Peminjaman",
+      pengembalian: "Pengembalian",
+      kerusakan: "Kerusakan",
+    };
+    return labels[type] || type;
+  };
+
+  const academicYearOptions = getAcademicYearOptions();
+  const semesterOptions = getSemesterOptions();
 
   if (!canExport) {
     return (
@@ -65,268 +164,6 @@ export function ExportPage() {
       </div>
     );
   }
-
-  // Fungsi bantu untuk mendapatkan tahun ajaran dari tanggal
-  const getAcademicYearFromDate = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-
-    // Asumsi tahun ajaran Juli-Juni
-    if (month >= 7) {
-      return `${year}/${year + 1}`;
-    } else {
-      return `${year - 1}/${year}`;
-    }
-  };
-
-  // Data untuk berbagai jenis laporan dengan filter semester
-  const getReportData = () => {
-    const year = selectedAcademicYear;
-    const semester = selectedSemester;
-
-    let data = [];
-
-    switch (reportType) {
-      case "peminjaman":
-        data = mockLoans.filter((loan) => {
-          const yearMatch =
-            loan.academicYear === year ||
-            (loan.createdAt &&
-              getAcademicYearFromDate(loan.createdAt) === year);
-          const semesterMatch =
-            semester === "all" ||
-            loan.semester === semester ||
-            (loan.createdAt &&
-              getSemesterFromDate(loan.createdAt) === semester);
-          return yearMatch && semesterMatch;
-        });
-        break;
-      case "pengembalian":
-        data = mockLoans.filter((loan) => {
-          const yearMatch =
-            loan.status === "selesai" &&
-            (loan.academicYear === year ||
-              (loan.returnedAt &&
-                getAcademicYearFromDate(loan.returnedAt) === year));
-          const semesterMatch =
-            semester === "all" ||
-            loan.semester === semester ||
-            (loan.returnedAt &&
-              getSemesterFromDate(loan.returnedAt) === semester);
-          return yearMatch && semesterMatch;
-        });
-        break;
-      case "kerusakan":
-        data = mockDamageReports.filter((report) => {
-          const yearMatch =
-            report.academicYear === year ||
-            (report.createdAt &&
-              getAcademicYearFromDate(report.createdAt) === year);
-          const semesterMatch =
-            semester === "all" ||
-            report.semester === semester ||
-            (report.createdAt &&
-              getSemesterFromDate(report.createdAt) === semester);
-          return yearMatch && semesterMatch;
-        });
-        break;
-      case "aset_masuk":
-        data = generateAssetInData(year).filter((asset) => {
-          if (semester === "all") return true;
-          // Aset masuk biasanya di semester ganjil (awal tahun ajaran)
-          return semester === "ganjil";
-        });
-        break;
-      case "aset_keluar":
-        data = generateAssetOutData(year).filter((asset) => {
-          if (semester === "all") return true;
-          // Gunakan tanggal selesai untuk menentukan semester
-          if (asset.tanggal_selesai) {
-            return getSemesterFromDate(asset.tanggal_selesai) === semester;
-          }
-          return true;
-        });
-        break;
-      default:
-        data = [];
-    }
-
-    return data;
-  };
-
-  // Generate data aset masuk (mock)
-  const generateAssetInData = (year) => {
-    return mockAssets
-      .filter((asset) => asset.acquisitionYear === year)
-      .map((asset) => ({
-        id: asset.id,
-        name: asset.name,
-        category: asset.category,
-        acquisitionDate: asset.acquisitionDate || `${year}-01-15`,
-        quantity: asset.totalStock,
-        location: asset.location,
-        condition: asset.condition,
-      }));
-  };
-
-  // Generate data aset keluar (mock)
-  const generateAssetOutData = (year) => {
-    return mockLoans
-      .filter(
-        (loan) =>
-          loan.status === "selesai" &&
-          (loan.academicYear === year ||
-            (loan.returnedAt &&
-              getAcademicYearFromDate(loan.returnedAt) === year))
-      )
-      .flatMap((loan) => [
-        ...(loan.roomId
-          ? [
-              {
-                id: loan.roomId,
-                name: loan.roomName,
-                type: "ruangan",
-                borrower: loan.borrowerName,
-                startDate: loan.startDate,
-                endDate: loan.endDate,
-                status: "dikembalikan",
-              },
-            ]
-          : []),
-        ...loan.facilities.map((facility) => ({
-          id: facility.id,
-          name: facility.name,
-          type: "fasilitas",
-          borrower: loan.borrowerName,
-          startDate: loan.startDate,
-          endDate: loan.endDate,
-          quantity: facility.quantity,
-          status: "dikembalikan",
-        })),
-      ]);
-  };
-
-  // Fungsi handleExport yang diperbaiki
-  const handleExport = (
-    format,
-    type = reportType,
-    academicYear = selectedAcademicYear
-  ) => {
-    const data = getReportData();
-
-    if (data.length === 0) {
-      alert(`Tidak ada data untuk laporan ${type} tahun ${academicYear}`);
-      return;
-    }
-
-    if (format === "csv") {
-      exportToCSV(data, type, academicYear);
-    } else if (format === "pdf") {
-      exportToPDF(data, type, academicYear);
-    }
-  };
-
-  // Fungsi ekspor ke CSV
-  const exportToCSV = (data, type, academicYear) => {
-    if (data.length === 0) return;
-
-    const headers = Object.keys(data[0]);
-    const csvContent = [
-      headers.join(","),
-      ...data.map((row) =>
-        headers
-          .map((header) => `"${String(row[header] || "").replace(/"/g, '""')}"`)
-          .join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `laporan_${type}_${academicYear}_${
-        new Date().toISOString().split("T")[0]
-      }.csv`
-    );
-    link.style.visibility = "hidden";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Fungsi ekspor ke PDF (simulasi)
-  const exportToPDF = (data, type, academicYear) => {
-    const printWindow = window.open("", "_blank");
-    const content = `
-      <html>
-        <head>
-          <title>Laporan ${type} - ${academicYear}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .header { text-align: center; margin-bottom: 30px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Laporan ${getReportTypeLabel(type)}</h1>
-            <h2>Tahun Ajaran: ${academicYear} - Semester: ${
-      selectedSemester === "all"
-        ? "Semua Semester"
-        : semesterOptions.find((s) => s.value === selectedSemester)?.label
-    }</h2>
-            <p>Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                ${Object.keys(data[0] || {})
-                  .map((key) => `<th>${key.toUpperCase()}</th>`)
-                  .join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${data
-                .map(
-                  (row) => `
-                <tr>
-                  ${Object.values(row)
-                    .map((value) => `<td>${value}</td>`)
-                    .join("")}
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(content);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const getReportTypeLabel = (type) => {
-    const labels = {
-      peminjaman: "Peminjaman",
-      pengembalian: "Pengembalian",
-      kerusakan: "Kerusakan",
-      aset_masuk: "Aset Masuk",
-      aset_keluar: "Aset Keluar",
-    };
-    return labels[type] || type;
-  };
-
-  const reportData = getReportData();
 
   return (
     <div className="space-y-6">
@@ -345,23 +182,23 @@ export function ExportPage() {
             <Package className="size-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-foreground">{mockAssets.length}</div>
-            <p className="text-muted-foreground">6 kategori berbeda</p>
+            <div className="text-2xl font-bold">{stats.totalAssets}</div>
+            <p className="text-sm text-muted-foreground">Terdaftar di sistem</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-muted-foreground">
-              Peminjaman Aktif
+              Total Peminjaman
             </CardTitle>
             <ClipboardList className="size-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-foreground">
-              {mockLoans.filter((l) => l.status === "disetujui").length}
-            </div>
-            <p className="text-muted-foreground">Sedang dipinjam</p>
+            <div className="text-2xl font-bold">{stats.totalLoans}</div>
+            <p className="text-sm text-muted-foreground">
+              {stats.activeLoans} aktif
+            </p>
           </CardContent>
         </Card>
 
@@ -373,8 +210,8 @@ export function ExportPage() {
             <AlertTriangle className="size-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-foreground">{mockDamageReports.length}</div>
-            <p className="text-muted-foreground">Perlu penanganan</p>
+            <div className="text-2xl font-bold">{stats.totalReports}</div>
+            <p className="text-sm text-muted-foreground">Perlu penanganan</p>
           </CardContent>
         </Card>
 
@@ -386,8 +223,10 @@ export function ExportPage() {
             <FileText className="size-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-foreground">{selectedAcademicYear}</div>
-            <p className="text-muted-foreground">Aktif</p>
+            <div className="text-2xl font-bold">
+              {selectedAcademicYear || "Semua"}
+            </div>
+            <p className="text-sm text-muted-foreground">Filter aktif</p>
           </CardContent>
         </Card>
       </div>
@@ -401,17 +240,18 @@ export function ExportPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 flex-wrap">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="academic-year">Tahun Ajaran</Label>
               <Select
                 value={selectedAcademicYear}
                 onValueChange={setSelectedAcademicYear}
               >
-                <SelectTrigger className="w-[200px]" id="academic-year">
-                  <SelectValue />
+                <SelectTrigger id="academic-year">
+                  <SelectValue placeholder="Pilih Tahun Ajaran" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">Semua Tahun Ajaran</SelectItem>
                   {academicYearOptions.map((year) => (
                     <SelectItem key={year} value={year}>
                       {year}
@@ -427,7 +267,7 @@ export function ExportPage() {
                 value={selectedSemester}
                 onValueChange={setSelectedSemester}
               >
-                <SelectTrigger className="w-[200px]" id="semester">
+                <SelectTrigger id="semester">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -443,7 +283,7 @@ export function ExportPage() {
             <div className="space-y-2">
               <Label htmlFor="report-type">Jenis Laporan</Label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-[200px]" id="report-type">
+                <SelectTrigger id="report-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -452,8 +292,6 @@ export function ExportPage() {
                     Laporan Pengembalian
                   </SelectItem>
                   <SelectItem value="kerusakan">Laporan Kerusakan</SelectItem>
-                  <SelectItem value="aset_masuk">Aset Masuk</SelectItem>
-                  <SelectItem value="aset_keluar">Aset Keluar</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -461,83 +299,43 @@ export function ExportPage() {
         </CardContent>
       </Card>
 
-      {/* Preview Data dengan Info Semester */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pratinjau Data</CardTitle>
-          <CardDescription>
-            {selectedAcademicYear} - Semester:{" "}
-            {selectedSemester === "all"
-              ? "Semua Semester"
-              : semesterOptions.find((s) => s.value === selectedSemester)
-                  ?.label}{" "}
-            - Jenis: {getReportTypeLabel(reportType)}
-            {` (${reportData.length} data ditemukan)`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {reportData.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Tidak ada data untuk laporan ini
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    {Object.keys(reportData[0]).map((key) => (
-                      <th key={key} className="text-left p-2 font-medium">
-                        {key}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.slice(0, 5).map((row, index) => (
-                    <tr key={index} className="border-b">
-                      {Object.values(row).map((value, cellIndex) => (
-                        <td key={cellIndex} className="p-2">
-                          {String(value)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {reportData.length > 5 && (
-                <p className="text-muted-foreground text-sm mt-2">
-                  Menampilkan 5 dari {reportData.length} records
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Ekspor Laporan */}
       <Card>
         <CardHeader>
           <CardTitle>Ekspor Laporan</CardTitle>
-          <CardDescription>
-            Export data dalam format CSV atau PDF
-          </CardDescription>
+          <CardDescription>Export data dalam format CSV</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => handleExport("csv")}
-              disabled={reportData.length === 0}
-            >
-              <Download className="mr-2" />
-              Export CSV
-            </Button>
-            <Button
-              onClick={() => handleExport("pdf")}
-              disabled={reportData.length === 0}
-            >
-              <FileText className="mr-2" />
-              Export PDF
-            </Button>
+          <div className="flex flex-col gap-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Detail Ekspor:</h4>
+              <p className="text-sm">
+                • Tahun Ajaran: {selectedAcademicYear || "Semua"}
+                <br />• Semester:{" "}
+                {
+                  semesterOptions.find((s) => s.value === selectedSemester)
+                    ?.label
+                }
+                <br />• Jenis Laporan: {getReportTypeLabel(reportType)}
+                <br />• Format: CSV (Excel compatible)
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleExport("csv")}
+                disabled={loading}
+                className="flex-1"
+              >
+                <Download className="mr-2 size-4" />
+                {loading ? "Memproses..." : "Export CSV"}
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Catatan: File CSV dapat dibuka di Microsoft Excel, Google Sheets,
+              atau aplikasi spreadsheet lainnya.
+            </p>
           </div>
         </CardContent>
       </Card>
